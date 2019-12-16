@@ -1,0 +1,7 @@
+#!/bin/sh
+
+basedir=$(cd $(dirname $0) && pwd -P)
+export EP3_LIBPATH=$basedir/lib/ep3
+export EP3_TEMPLATE_DIR=$basedir/share/ep3
+
+$EP3_LIBPATH/ep3.rb "$@"

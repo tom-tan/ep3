@@ -1,0 +1,1 @@
+../../../share/cwl-inspector/cwl/inspector.rb

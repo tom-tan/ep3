@@ -1,0 +1,223 @@
+#!/usr/bin/env ruby
+# coding: utf-8
+require 'fileutils'
+require 'optparse'
+require 'tempfile'
+require 'time'
+require 'json'
+
+def satisfies_inputs(inputs)
+  inputs.all?{ |inp|
+    path, st = inp[:variable], inp[:value]
+    case st
+    when '*'
+      File.size?(path) and not open(path).gets.chomp.empty?
+    when ''
+      size = File.size?(path)
+      size.nil? or open(path).gets.chomp.empty?
+    else
+      File.exist?(path) and (open(path).gets or "").chomp == inp[:value]
+    end
+  }
+end
+
+def backup(outputs)
+  outputs.each{ |out|
+    if File.exist? out[:variable]
+      FileUtils.cp(out[:variable], out[:bak])
+    else
+      open(out[:bak], 'w') { |f|
+        f.puts
+      }
+    end
+  }
+end
+
+def generate_log(hash)
+  {
+    pid: Process.pid,
+  }.merge(hash)
+end
+
+if $0 == __FILE__
+  in_places = []
+  out_places = []
+  dir = ENV.fetch('STATE_DIR', Dir.pwd)
+  ep3_tag = 'ep3'
+  name = 'transition'
+  redirect_stdout = false
+  redirect_stderr = false
+  through_return = true
+  opt = OptionParser.new
+  opt.banner = "Usage: #{$0} [options] -- <command>"
+  opt.on('--name NAME') { |n|
+    name = n
+  }
+  opt.on('-d DIR', '--working-directory=DIR') { |d|
+    raise "Directory not exist: #{d}" unless Dir.exist? d
+    dir = d
+  }
+  opt.on('--tag ID') { |tag|
+    ep3_tag = tag
+  }
+  opt.on('-i VARIABLE[=VALUE]') { |input|
+    var, val = if input.match(/^(.+)=(.+)$/)
+                 [$1, $2]
+               else
+                 [input, '']
+               end
+    in_places.push({ :variable => var, :value => val })
+  }
+  opt.on('-o VARIABLE[=VALUE]', 'Output place') { |output|
+    var, val = if output.match(/^(.+)=(.+)$/)
+                 [$1, $2]
+               else
+                 [output, '']
+               end
+    case val
+    when 'STDOUT'
+      redirect_stdout = true
+    when 'STDERR'
+      redirect_stderr = true
+    when 'RETURN'
+      through_return = false
+    end
+    out_places.push({ :variable => var, :value => val })
+  }
+  opt.parse!(ARGV)
+  command = ARGV
+
+  in_places = in_places.map{ |ip|
+    var = if ip[:variable].match(%r|^(.+)/(.+)$|)
+            d, l = $1, $2
+            raise "Directory not exist: #{d}" unless Dir.exist? d
+            File.join(d, l)
+          else
+            File.join(dir, ip[:variable])
+          end
+    {
+      :variable => var,
+      :value => ip[:value],
+    }
+  }
+
+  out_places = out_places.map{ |op|
+    var = if op[:variable].match(%r|^(.+)/(.+)$|)
+              d, l = $1, $2
+              raise "Directory not exist: #{d}" unless Dir.exist? d
+              File.join(d, l)
+            else
+              File.join(dir, op[:variable])
+            end
+    {
+      :variable => var,
+      :value => op[:value],
+      :bak   => "#{var}.bak",
+    }
+  }
+
+  satisfied = satisfies_inputs(in_places)
+  exit 1 unless satisfied
+
+  in_places.select{ |inp|
+    out_places.all?{ |o| o[:variable] != inp[:variable] }
+  }.each{ |inp|
+    mode = File.exist?(inp[:variable]) ? 'r' : 'w'
+    f = open(inp[:variable], mode)
+    f.flock(File::LOCK_EX)
+  }
+  backup(out_places)
+  ofs = out_places.map{ |out|
+    f = open(out[:variable], 'w')
+    f.flock(File::LOCK_EX)
+    f
+  }
+  stdout = if redirect_stdout
+             raise 'command is not specified' if command.empty?
+             Tempfile.new('stdout')
+           end
+  stderr = if redirect_stderr
+             raise 'command is not specified' if command.empty?
+             Tempfile.new('stderr')
+           end
+  ret = 0
+  warn JSON.dump(generate_log({
+                                name: name,
+                                label: ep3_tag,
+                                event_type: "start",
+                                time: Time.now.iso8601(9),
+                                transition: {
+                                  command: command.join(" "),
+                                  in: in_places,
+                                  out: out_places.map{ |o| o.select{ |k, _| k != :bak } },
+                                }
+                              }))
+  code = nil
+  begin
+    if command.empty?
+      code = 0
+    else
+      opt = {}
+      opt[:out] = stdout if redirect_stdout
+      opt[:err] = stderr if redirect_stderr
+      pid = spawn({}, command.join(' '), opt)
+      _, stat = Process.waitpid2 pid
+      stdout.close if stdout
+      stderr.close if stderr
+      code = stat.exitstatus
+      if through_return
+        ret = stat.exitstatus
+      end
+    end
+    ofs.zip(out_places).each{ |f, out|
+      f.reopen(out[:variable], 'w')
+      st = out[:value]
+      case st
+      when 'STDOUT'
+        open(stdout.path).each { |line|
+          f.puts line
+        }
+      when 'STDERR'
+        open(stderr.path).each { |line|
+          f.puts line
+        }
+      when 'RETURN'
+        raise 'command is not specified' if command.empty?
+        f.puts code
+      else
+        f.puts st
+      end
+    }
+  rescue Interrupt => e
+    if pid
+      Process.kill(:INT, pid)
+      Process.waitpid pid
+      code = 128+e.signo
+    end
+    ofs.zip(out_places).each{ |f, out|
+      f.reopen(out[:variable], 'w')
+      open(out[:bak]).each{ |bak|
+        f.puts bak
+      }
+    }
+  ensure
+    out_places.each{ |o|
+      FileUtils.rm(o[:bak]) if File.exist? o[:bak]
+    }
+    stdout.unlink if redirect_stdout
+    stderr.unlink if redirect_stderr
+    warn JSON.dump(generate_log({
+                                  name: name,
+                                  label: ep3_tag,
+                                  event_type: "end",
+                                  time: Time.now.iso8601(9),
+                                  transition: {
+                                    command: command.join(" "),
+                                    in: in_places,
+                                    out: out_places.map{ |o| o.select{ |k, _| k != :bak } },
+                                  },
+                                  code: code
+                                }))
+  end
+  exit ret
+end
