@@ -1,3 +1,0 @@
-[submodule "share/cwl-inspector"]
-	path = share/cwl-inspector
-	url = https://github.com/tom-tan/cwl-inspector.git
