@@ -3,6 +3,7 @@
 target_dir=$(cd $(dirname $0) && pwd -P)
 PATH=$EP3_LIBPATH/runtime:$PATH
 EP3_ID=ep3.system.runner
+SHELL=/bin/sh
 PID=$$
 
 for f in $target_dir/ep3/control $target_dir/status/ExecutionState
