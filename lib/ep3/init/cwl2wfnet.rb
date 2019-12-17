@@ -147,7 +147,7 @@ def replace_extensions(cwl, exts, basedir)
 end
 
 def convert(dst, ids = [])
-  cwl = CommonWorkflowLanguage.load_file(File.join(dst, 'cwl', 'job.cwl'))
+  cwl = CommonWorkflowLanguage.load_file(File.join(dst, 'cwl', 'job.cwl'), false)
   case walk(cwl, '.class')
   when 'CommandLineTool', 'ExpressionTool'
     [
