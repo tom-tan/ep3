@@ -36,5 +36,5 @@ jobs:
     - name: Run conformance test
       run: |
         cd cwl
-        chmod -R 755 $pythonLocation # suppress warnings from Ruby interpreter
+        chmod -R 755 /opt/hostedtoolcache/Python # suppress warnings from Ruby interpreter
         ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner --badgedir=badges --timeout=30
