@@ -35,6 +35,6 @@ jobs:
         git clone --depth 1 https://github.com/common-workflow-language/common-workflow-language.git cwl
     - name: Run conformance test
       run: |
+        export RUBYOPT=-W0 # suppress warnings from Ruby interpreter
         cd cwl
-        chmod -R 755 /opt # suppress warnings from Ruby interpreter
         ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner --badgedir=badges --timeout=30
