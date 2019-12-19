@@ -20,24 +20,29 @@ jobs:
       run: |
         gem install -N fluentd
         # fluent-gem install -N fluent-plugin-rewrite-tag-filter
-    - name: Install entr and jq
+    - name: Install entr and jq 
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends entr jq
+    - name: Suppress warnings from Ruby interpreter
+      run: export RUBYOPT=-W0
     - uses: actions/setup-node@v1.1.0
     - name: Run example
       run: |
         $GITHUB_WORKSPACE/ep3-runner --debug examples/workflow.cwl examples/inputs.yml | jq .
     - name: Setup Python for testing
       uses: actions/setup-python@v1.1.1
+      if: 'false'
     - name: Install cwltest
       run: |
         pip install cwltest
+      if: 'false'
     - name: Prepare CWL repository for conformance test
       run: |
         git clone --depth 1 https://github.com/common-workflow-language/common-workflow-language.git cwl
+      if: 'false'
     - name: Run conformance test
       run: |
-        export RUBYOPT=-W0 # suppress warnings from Ruby interpreter
         cd cwl
         ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner --badgedir=badges --timeout=30
+      if: 'false'
