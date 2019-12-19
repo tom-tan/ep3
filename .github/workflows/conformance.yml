@@ -16,6 +16,8 @@ jobs:
     - uses: actions/setup-ruby@v1.0.0
       with:
         version: '2.6.x'
+    - name: Suppress warnings from Ruby interpreter
+      run: export RUBYOPT=-W0
     - name: Install Fluentd
       run: |
         gem install -N fluentd
@@ -24,8 +26,6 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends entr jq
-    - name: Suppress warnings from Ruby interpreter
-      run: export RUBYOPT=-W0
     - uses: actions/setup-node@v1.1.0
     - name: Run example
       run: |
