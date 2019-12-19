@@ -25,6 +25,9 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends entr jq
     - uses: actions/setup-node@v1.1.0
+    - name: Run example
+      run: |
+        cwl-runner --debug examples/workflow.cwl examples/inputs.yml | jq .
     - name: Setup Python for testing
       uses: actions/setup-python@v1.1.1
     - name: Install cwltest
