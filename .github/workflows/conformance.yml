@@ -21,7 +21,6 @@ jobs:
     - name: Install Fluentd
       run: |
         gem install -N fluentd
-        # fluent-gem install -N fluent-plugin-rewrite-tag-filter
     - name: Install entr and jq 
       run: |
         sudo apt-get update
