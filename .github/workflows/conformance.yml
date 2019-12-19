@@ -1,0 +1,38 @@
+name: Docker Image CI
+
+on: [push, pull_request]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+    - uses: actions/setup-ruby@v1.0.0
+      with:
+        version: '2.6.x'
+    - name: Install Fluentd
+      run: |
+        gem install -N fluentd
+        # fluent-gem install -N fluent-plugin-rewrite-tag-filter
+    - name: Install entr and jq
+      run: |
+        apt-get update
+        apt-get install -y --no-install-recommends entr jq git
+    - uses: actions/setup-node@v1.1.0
+    - name: Setup Python for testing
+      uses: actions/setup-python@v1.1.1
+    - name: Install cwltest
+      run: |
+        pip install cwltest
+    - name: Prepare CWL repository for conformance test
+      run: |
+        git clone --depth 1 https://github.com/common-workflow-language/common-workflow-language.git cwl
+    - name: Run conformance test
+      run: |
+        cd cwl
+        ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner --badgedir=badges --timeout=30
