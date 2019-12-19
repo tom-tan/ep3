@@ -36,5 +36,5 @@ jobs:
     - name: Run conformance test
       run: |
         cd cwl
-        ls -l /opt/hostedtoolcache/Python/3.8.0/x64/bin
+        ls -ld /opt/hostedtoolcache/Python/3.8.0/x64/bin
         ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner --badgedir=badges --timeout=30
