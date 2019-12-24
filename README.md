@@ -5,8 +5,7 @@ This is a CWL engine which aims to have a pluggable architecture.
 ## Requirements
 - [entr](http://entrproject.org)
 - Ruby 2.5.1 or later
-- Fluentd 1.3.3
-  - fluent-plugin-rewrite-tag-filter
+- Fluentd 1.3.3 or later
 - jq
 - nodejs
 - [cwl-inspector](https://github.com/tom-tan/cwl-inspector)
@@ -19,7 +18,6 @@ This is a CWL engine which aims to have a pluggable architecture.
 ```console
 $ git clone --recursive https://github.com/tom-tan/ep3.git
 $ gem install -N fluentd
-$ fluent-gem install -N fluent-plugin-rewrite-tag-filter
 ```
 
 ## Example
