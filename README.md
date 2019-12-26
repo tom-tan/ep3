@@ -22,7 +22,7 @@ $ gem install -N fluentd
 
 ## Example
 ```console
-$ ep3-runner --quiet /path/to/ep3/example/workflow.cwl /path/to/ep3/examles/inputs.yml | jq .
+$ ep3-runner --quiet /path/to/ep3/examples/workflow.cwl /path/to/ep3/examples/inputs.yml | jq .
 {
   "output": {
     "class": "File",
