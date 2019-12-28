@@ -32,7 +32,7 @@ jobs:
     - name: Install entr and jq for mac
       if: runner.os == 'macOS'
       run: |
-        brew install entr jq binutils
+        brew install entr jq coreutils
     - uses: actions/setup-node@v1.1.0
     - name: Run example
       run: |
