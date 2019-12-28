@@ -1,0 +1,9 @@
+- job: examples/inputs.yml
+  tool: examples/workflow.cwl
+  output:
+    output:
+      class: File
+      basename: output
+      checksum: sha1$c28e458d4e943c743b9b3c46fdab10688a6d68b6
+      size: 687
+  doc: Workflow example

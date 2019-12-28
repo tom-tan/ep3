@@ -24,27 +24,23 @@ jobs:
     - name: Install Fluentd
       run: |
         gem install -N fluentd
-    - name: Install entr and jq for Linux
+    - name: Install entr for Linux
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends entr jq
+        sudo apt-get install -y --no-install-recommends entr
     - name: Install entr and jq for mac
       if: runner.os == 'macOS'
-      run: |
-        brew install entr jq coreutils
+      run: brew install entr jq coreutils
     - uses: actions/setup-node@v1.1.0
-    - name: Run example
-      run: |
-        $GITHUB_WORKSPACE/ep3-runner --debug examples/workflow.cwl examples/inputs.yml | jq .
     - name: Setup Python for testing
       uses: actions/setup-python@v1.1.1
     - name: Install cwltest
-      run: |
-        pip install cwltest
+      run: pip install cwltest
+    - name: Run example
+      run: cwltest --tool $GITHUB_WORSPACE/ep3-runner --test test.yml
     - name: Prepare CWL repository for conformance test
-      run: |
-        git clone --depth 1 https://github.com/common-workflow-language/common-workflow-language.git cwl
+      run: git clone --depth 1 https://github.com/common-workflow-language/common-workflow-language.git cwl
     - name: Run conformance test
       run: |
         cd cwl
