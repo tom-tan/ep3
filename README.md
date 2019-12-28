@@ -20,6 +20,15 @@ $ git clone --recursive https://github.com/tom-tan/ep3.git
 $ gem install -N fluentd
 ```
 
+## How to test
+```console
+$ git clone --recursive https://github.com/tom-tan/ep3.git
+$ cd ep3
+$ cwltest --tool $PWD/ep3-runner --test test.yml
+Test [1/1] Workflow example
+All tests passed
+```
+
 ## Example
 ```console
 $ ep3-runner --quiet /path/to/ep3/examples/workflow.cwl /path/to/ep3/examples/inputs.yml | jq .
