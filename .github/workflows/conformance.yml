@@ -21,7 +21,8 @@ jobs:
     - name: Install Fluentd
       run: |
         gem install -N fluentd
-    - name: Install entr and jq 
+    - name: Install entr and jq for Linux
+      if: runner.os == "Linux"
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends entr jq
@@ -31,17 +32,13 @@ jobs:
         $GITHUB_WORKSPACE/ep3-runner --debug examples/workflow.cwl examples/inputs.yml | jq .
     - name: Setup Python for testing
       uses: actions/setup-python@v1.1.1
-      if: 'false'
     - name: Install cwltest
       run: |
         pip install cwltest
-      if: 'false'
     - name: Prepare CWL repository for conformance test
       run: |
         git clone --depth 1 https://github.com/common-workflow-language/common-workflow-language.git cwl
-      if: 'false'
     - name: Run conformance test
       run: |
         cd cwl
         ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner --badgedir=badges --timeout=30
-      if: 'false'
