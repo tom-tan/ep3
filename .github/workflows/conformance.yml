@@ -38,13 +38,7 @@ jobs:
     - name: Install cwltest
       run: pip install cwltest
     - name: Run example
-      run: |
-        $GITHUB_WORKSPACE/ep3-runner --debug examples/workflow.cwl examples/inputs.yml | jq .
-        echo =======
-        cat output || true
-        echo =======
-        ls -l output
-        cwltest --tool $GITHUB_WORKSPACE/ep3-runner --test test.yml || true
+      run: cwltest --tool $GITHUB_WORKSPACE/ep3-runner --test test.yml
     - name: Prepare CWL repository for conformance test
       run: git clone --depth 1 https://github.com/common-workflow-language/common-workflow-language.git cwl
     - name: Run conformance test
