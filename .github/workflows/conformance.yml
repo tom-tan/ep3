@@ -1,4 +1,4 @@
-name: Run conformance test
+name: Conformance
 
 on: [push, pull_request]
 
