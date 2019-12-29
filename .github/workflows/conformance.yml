@@ -43,6 +43,7 @@ jobs:
         echo =======
         cat output || true
         echo =======
+        ls -l output
         cwltest --tool $GITHUB_WORKSPACE/ep3-runner --test test.yml || true
     - name: Prepare CWL repository for conformance test
       run: git clone --depth 1 https://github.com/common-workflow-language/common-workflow-language.git cwl
