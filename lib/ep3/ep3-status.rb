@@ -10,9 +10,11 @@ def read_job_status(dir, verbose)
   file = File.join(dir, 'status', 'ExecutionState')
   ret['job status'] = if File.exist? file
                         st = open(file) { |f|
-                          f.gets.chomp
+                          f.gets
                         }
+                        st = st.chomp unless st.nil?
                         case st
+                        when nil                then 'not started'
                         when 'wip'              then 'running'
                         when 'success'          then 'finished (success)'
                         when 'permanentFalure'  then 'finished (permanentFalure)'

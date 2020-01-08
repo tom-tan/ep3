@@ -74,6 +74,13 @@ def wfnet2entr(net)
       %Q!echo "#{inp}" | entr -prsn "#{command}"&!
     end
   }.flatten
+
+  ps = entrs.each_with_index.map { |_, idx|
+    "p#{idx}"
+  }
+  execs = entrs.zip(ps).map { |e, p|
+    "#{e}\n#{p}=$!"
+  }
   <<EOS
 #!/bin/sh
 
@@ -91,7 +98,11 @@ do
   fi
 done
 
-#{entrs.join("\n")}
+#{execs.join("\n")}
+
+trap "kill -s INT  -- #{ps.map{ |p| "$#{p}"}.join(' ')}" USR1
+
+wait
 EOS
 end
 

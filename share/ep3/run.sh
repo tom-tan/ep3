@@ -16,16 +16,18 @@ done
 for job in $(find $target_dir -name job.sh)
 do
     dir=$(dirname $job)
-    (cd $dir && run.rb 'sh job.sh')
+    (cd $dir && sh job.sh)&
 done
 
-notifyquit="echo stop > $target_dir/ep3/control"
+notifyquit="transition -o $target_dir/ep3/control=stop"
 
-echo $target_dir/status/ExecutionState | entr -prsn "$notifyquit; kill -INT -- $PID"&
+echo $target_dir/status/ExecutionState | entr -prsn "$notifyquit; kill -s USR1 -- $PID"&
 entrpid=$!
 
-trap "$notifyquit; kill -INT -- $entrpid" 2 15
+trap "$notifyquit; kill -s INT -- $entrpid" INT
+trap "kill -s INT -- $entrpid" USR1
 
+sleep 2 # wait for preparing all entr processes
 echo prepared
 
 wait

@@ -88,12 +88,14 @@ def ep3_run(args)
     IO.popen({ 'EP3_LIBPATH' => ENV['EP3_LIBPATH'] }, "sh run.sh 2> .ep3/system/job.log", :chdir => dir) { |io|
       msg = io.gets.chomp
       unless msg == 'prepared'
-        raise "Unknown message"
+        raise "Unknown message: '#{msg}'"
       end
       open(File.join(dir, 'status', 'inputs.json'), 'w') { |f|
         f.puts JSON.dump detailed_input(input, dir)
       }
     }
+  rescue Interrupt
+    # nop
   ensure
     unless pid.nil?
       Process.kill :TERM, pid
