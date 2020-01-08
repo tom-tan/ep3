@@ -34,7 +34,7 @@ jobs:
         cd entr-${ENTR_VER}
         ./configure
         make test
-        make install
+        sudo make install
         cd -
     - name: Install entr and jq for mac
       if: runner.os == 'macOS'
