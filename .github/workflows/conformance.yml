@@ -6,7 +6,7 @@ jobs:
 
   build:
 
-    runs-on: ${{ matrix.os}}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
@@ -26,9 +26,16 @@ jobs:
         gem install -N fluentd
     - name: Install entr for Linux
       if: runner.os == 'Linux'
+      env:
+        ENTR_VER: 4.4
       run: |
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends entr
+        curl -O http://eradman.com/entrproject/code/entr-${ENTR_VER}.tar.gz
+        tar xf entr-${ENTR_VER}.tar.gz
+        cd entr-${ENTR_VER}
+        ./configure
+        make test
+        make install
+        cd -
     - name: Install entr and jq for mac
       if: runner.os == 'macOS'
       run: brew install entr jq coreutils docker
