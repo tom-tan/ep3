@@ -31,7 +31,7 @@ jobs:
         ./configure
         make test
         sudo make install
-        cd -
+        cd $GITHUB_WORKSPACE
     - uses: actions/setup-node@v1.1.0
       with:
         node-version: '12.x'
@@ -49,5 +49,25 @@ jobs:
       run: |
         cd cwl
         ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner --badgedir=badges --timeout=30 || true
+    - name: Save badges
+      if: success()
+      run: |
+        # git init
+        # git config user.name "$GITHHUB_ACTOR"
+        # git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+        # git checkout -b conformance
+        cd $GITHUB_WORKSPACE
+        git log -n 1 || true
+        ls cwl/badges || true
+        mkdir -p conformance/ep3/cwl_${cwlVersion}
+        rm -rf conformance/ep3/cwl_${cwlVersion}/ep3_latest
+        cp -r cwl/badges conformance/ep3/cwl_${cwlVersion}/ep3_latest
+        ls conformance/ep3/cwl_${cwlVersion}/ep3_latest
+        # git add conformance/ep3/cwl_${cwlVersion}/ep3_latest
+        # git commit -m "Conformance test of ep3 for CWL ${cwlVersion}"
+        # git push --quiet
+      env:
+        cwlVersion: v1.0
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - uses: mxschmitt/action-tmate@v1
       if: false
