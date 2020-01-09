@@ -53,11 +53,9 @@ jobs:
     - name: Save badges
       if: success()
       run: |
-        # git config user.name "$GITHHUB_ACTOR"
-        # git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+        git config user.name "$GITHHUB_ACTOR"
+        git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
         # git checkout -b conformance
-        git log -n 1 || true
-        ls cwl/${cwlVersion}/badges
         mkdir -p conformance/ep3/cwl_${cwlVersion}
         rm -rf conformance/ep3/cwl_${cwlVersion}/ep3_latest
         cp -r cwl/${cwlVersion}/badges conformance/ep3/cwl_${cwlVersion}/ep3_latest
