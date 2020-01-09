@@ -36,9 +36,10 @@ jobs:
         make test
         sudo make install
         cd -
-    - name: Install entr and jq for mac
+    - name: Install entr and other tools for mac
       if: runner.os == 'macOS'
-      run: brew install entr jq coreutils docker
+      # coreutils: greadlink for cwltest
+      run: brew install entr coreutils docker
     - uses: actions/setup-node@v1.1.0
     - name: Setup Python for testing
       uses: actions/setup-python@v1.1.1
