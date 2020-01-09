@@ -20,12 +20,11 @@ jobs:
         submodules: true
     - uses: actions/setup-ruby@v1.0.0
       with:
-        version: '2.6.x'
+        version: '2.7.x'
     - name: Install Fluentd
       run: |
         gem install -N fluentd
-    - name: Install entr for Linux
-      if: runner.os == 'Linux'
+    - name: Install entr
       env:
         ENTR_VER: 4.4
       run: |
@@ -36,13 +35,17 @@ jobs:
         make test
         sudo make install
         cd -
-    - name: Install entr and other tools for mac
+    - name: Install other tools for mac
       if: runner.os == 'macOS'
       # coreutils: greadlink for cwltest
-      run: brew install entr coreutils docker
+      run: brew install coreutils docker
     - uses: actions/setup-node@v1.1.0
+      with:
+        node-version: '12.x'
     - name: Setup Python for testing
       uses: actions/setup-python@v1.1.1
+      with:
+        python-version: '3.8.x'
     - name: Install cwltest
       run: pip install cwltest
     - name: Run example
