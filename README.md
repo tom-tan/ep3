@@ -1,7 +1,6 @@
 # Ep3: Extremely Pluggable Pipeline Processor
 
-[![Actions Status](https://github.com/tom-tan/ep3/workflows/Conformance/badge.svg?branch=master&event=push)](https://github.com/tom-tan/ep3/actions)
-[![Actions Status](https://badgen.net/github/status/tom-tan/ep3/master/Conformance?icon=commonwl)](https://github.com/tom-tan/ep3/actions)
+[![Actions Status](https://badgen.net/github/status/tom-tan/ep3/master?icon=commonwl)](https://github.com/tom-tan/ep3/actions)
 [![license](https://badgen.net/github/license/tom-tan/ep3)](https://github.com/tom-tan/ep3/blob/master/LICENSE)
 
 This is a CWL engine which aims to have a pluggable architecture.
