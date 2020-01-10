@@ -5,6 +5,16 @@
 
 This is a workflow engine for the [Common Workflow Language](https://www.commonwl.org) which aims to have a pluggable architecture.
 
+## Conformance (CWL v1.0)
+### Classes
+![CommandLineTool](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/command_line_tool.json?icon=commonwl) ![ExpressionTool](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/expression_tool.json?icon=commonwl) ![Workflow](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/workflow.json?icon=commonwl)
+
+### Required features
+![Required](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/required.json?icon=commonwl)
+
+### Requirements (Optional features)
+![DockerRequirement](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/docker.json?icon=commonwl) ![EnvVarRequirement](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/env_var.json?icon=commonwl) ![InitialWorkDirRequirement](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/initial_work_dir.json?icon=commonwl) ![InlineJavascriptRequirement](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/inline_javascript.json?icon=commonwl) ![MultipleInputFeatureRequirement](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/multiple_input.json?icon=commonwl) ![ResourceRequirement](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/resource.json?icon=commonwl) ![ScatterFeatureRequirement](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/scatter.json?icon=commonwl) ![SchemaDefRequirement](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/schema_def.json?icon=commonwl) ![ShellCommandRequirement](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/shell_command.json?icon=commonwl) ![StepInputExpressionRequirement](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/step_input.json?icon=commonwl) ![SubworkflowFeatureRequirement](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/subworkflow.json?icon=commonwl)
+
 ## Requirements
 - [entr](http://entrproject.org)
 - Ruby 2.5.1 or later
