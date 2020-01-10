@@ -3,7 +3,7 @@
 [![Actions Status](https://badgen.net/github/checks/tom-tan/ep3/master?icon=commonwl)](https://github.com/tom-tan/ep3/actions)
 [![license](https://badgen.net/github/license/tom-tan/ep3)](https://github.com/tom-tan/ep3/blob/master/LICENSE)
 
-This is a CWL engine which aims to have a pluggable architecture.
+This is a workflow engine for the [Common Workflow Language](https://www.commonwl.org) which aims to have a pluggable architecture.
 
 ## Requirements
 - [entr](http://entrproject.org)
