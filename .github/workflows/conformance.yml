@@ -59,7 +59,7 @@ jobs:
     - name: Save badges
       if: success() && github.event_name == 'push'
       run: |
-        git clone --depth 1 https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/tom-tan/conformance.git
+        git clone --depth 1 https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/tom-tan/conformance
 
         cd conformance
         mkdir -p conformance/ep3/cwl_${cwlVersion}
