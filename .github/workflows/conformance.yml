@@ -54,13 +54,14 @@ jobs:
     - name: Run conformance test
       run: |
         cd cwl
-        ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner --badgedir=badges --timeout=30 || true
+        ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner --badgedir=badges --timeout=30 -n=1-10 || true
         cd $GITHUB_WORKSPACE
     - name: Save badges
       if: success() && github.event_name == 'push'
       run: |
         git clone --depth 1 https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/tom-tan/conformance.git
         cd conformance
+        git log -n 1
         git config user.name "$GITHHUB_ACTOR"
         git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
 
