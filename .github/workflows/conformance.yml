@@ -62,14 +62,15 @@ jobs:
         git clone --depth 1 https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/tom-tan/conformance.git
         cd conformance
         git log -n 1
-        git config --global user.name "$GITHHUB_ACTOR"
-        git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
 
         mkdir -p conformance/ep3/cwl_${cwlVersion}
         rm -rf conformance/ep3/cwl_${cwlVersion}/ep3_latest
         cp -r $GITHUB_WORKSPACE/cwl/${cwlVersion}/badges conformance/ep3/cwl_${cwlVersion}/ep3_latest
         ls conformance/ep3/cwl_${cwlVersion}/ep3_latest
         git add conformance/ep3/cwl_${cwlVersion}/ep3_latest
+        git config user.name "ep3 bot"
+        git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+        git config --list
         git commit -m "Conformance test of ep3 for CWL ${cwlVersion}"
         git log -n 2
         # git push --quiet
