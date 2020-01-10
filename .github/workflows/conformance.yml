@@ -59,7 +59,7 @@ jobs:
     - name: Save badges
       if: success() && github.event_name == 'push'
       run: |
-        git clone --depth 1 https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/tom-tan/conformance
+        git clone --depth 1 https://${GITHUB_ACTOR}:${CONFORMANCE_TOKEN}@github.com/tom-tan/conformance.git
 
         cd conformance
         mkdir -p conformance/ep3/cwl_${cwlVersion}
@@ -73,6 +73,6 @@ jobs:
         git push --quiet
       env:
         cwlVersion: v1.0
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CONFORMANCE_TOKEN: ${{ secrets.CONFORMANCE_TOKEN }}
     - uses: mxschmitt/action-tmate@v1
       if: false
