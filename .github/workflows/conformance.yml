@@ -1,6 +1,12 @@
 name: Conformance
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - '*'
+  pull_request: {}
 
 jobs:
 
@@ -51,17 +57,19 @@ jobs:
         ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner --badgedir=badges --timeout=30 || true
         cd $GITHUB_WORKSPACE
     - name: Save badges
-      if: success()
+      if: success() && github.event_name == 'push'
       run: |
+        git clone --depth 1 https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/tom-tan/conformance.git
+        cd conformance
         git config user.name "$GITHHUB_ACTOR"
         git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
-        # git checkout -b conformance
+
         mkdir -p conformance/ep3/cwl_${cwlVersion}
         rm -rf conformance/ep3/cwl_${cwlVersion}/ep3_latest
-        cp -r cwl/${cwlVersion}/badges conformance/ep3/cwl_${cwlVersion}/ep3_latest
+        cp -r $GITHUB_WORKSPACE/cwl/${cwlVersion}/badges conformance/ep3/cwl_${cwlVersion}/ep3_latest
         ls conformance/ep3/cwl_${cwlVersion}/ep3_latest
-        # git add conformance/ep3/cwl_${cwlVersion}/ep3_latest
-        # git commit -m "Conformance test of ep3 for CWL ${cwlVersion}"
+        git add conformance/ep3/cwl_${cwlVersion}/ep3_latest
+        git commit -m "Conformance test of ep3 for CWL ${cwlVersion}"
         # git push --quiet
       env:
         cwlVersion: v1.0
