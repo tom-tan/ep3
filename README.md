@@ -63,10 +63,10 @@ The `ep3-runner` command consists of the following internal commands:
 - `ep3 resume` (Unimplemented)
 - `ep3 stop` (Unimplemented)
 
-### About badge
-The CI badge represents the CI result of the latest commit in master branch.
+### About `checks` badge
+The `checks` badge represents the CI result of the latest commit in master branch.
 
-- `passing`
+- ![success](https://badgen.net/badge/checks/success/green?icon=commonwl)
   - It passes the basic test. CI also runs the conformance test for this commit. The conformance badges will be available once CI passes the basic test.
-- `failing`
+- ![failure](https://badgen.net/badge/checks/failure/red?icon=commonwl)
   - It does not pass the basic test. CI skips the conformance test for this commit because it does not work with the most or all the CWL documents.
