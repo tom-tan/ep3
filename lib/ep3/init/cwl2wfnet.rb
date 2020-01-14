@@ -452,7 +452,7 @@ def wfnet(cwl, ids)
       inp = ps.flatten.map{ |p| Place.new(p, '*') }
       net << Transition.new(in_: inp,
                             out: [Place.new("steps/#{step}/status/inputs.json", 'STDOUT')],
-                            command: %Q!jq -cs \\'{ #{jqparams[0].join(', ') } }\\' #{jqparams[1].flatten.compact.map{ |p| File.join('$STATE_DIR', p) }.join(' ') }!,
+                            command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].flatten.compact.map{ |p| File.join('$STATE_DIR', p) }.join(' ') }!,
                             name: "start-#{step}")
     end
 
@@ -499,7 +499,7 @@ def wfnet(cwl, ids)
 
     net << Transition.new(in_: outParams.map{ |o| Place.new(o, '*') }+resultPlaces,
                           out: [Place.new('cwl.output.json', 'STDOUT'), Place.new('ExecutionState', 'success')],
-                          command: %Q!jq -cs \\'{ #{jqparams[0].join(', ') } }\\' #{jqparams[1].map{ |j| File.join('$STATE_DIR', j) }.join(' ')}!,
+                          command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].map{ |j| File.join('$STATE_DIR', j) }.join(' ')}!,
                           name: 'generate-output-object')
   end
   net << Transition.new(in_: [Place.new('ExecutionState', '*')], out: [],
