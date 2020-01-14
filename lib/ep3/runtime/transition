@@ -160,7 +160,7 @@ if $0 == __FILE__
       opt = {}
       opt[:out] = stdout if redirect_stdout
       opt[:err] = stderr if redirect_stderr
-      pid = spawn({}, command.join(' '), opt)
+      pid = spawn({}, command.map{ |c| %Q!"#{c}"! }.join(' '), opt)
       _, stat = Process.waitpid2 pid
       stdout.close if stdout
       stderr.close if stderr
