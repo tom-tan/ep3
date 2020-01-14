@@ -27,7 +27,4 @@ entrpid=$!
 trap "$notifyquit; kill -s INT -- $entrpid" INT
 trap "kill -s INT -- $entrpid" USR1
 
-sleep 2 # wait for preparing all entr processes
-echo prepared
-
 wait

@@ -83,22 +83,23 @@ def ep3_run(args)
 
   pid = run_fluentd(dir, template_dir,
                     opts.include?('quiet'), opts.include?('debug'))
-
+  ep3_pid = nil
   begin
-    IO.popen({ 'EP3_LIBPATH' => ENV['EP3_LIBPATH'] }, "sh run.sh 2> .ep3/system/job.log", :chdir => dir) { |io|
-      msg = io.gets.chomp
-      unless msg == 'prepared'
-        raise "Unknown message: '#{msg}'"
-      end
-      open(File.join(dir, 'status', 'inputs.json'), 'w') { |f|
-        f.puts JSON.dump detailed_input(input, dir)
-      }
+    ep3_pid = spawn({ 'EP3_LIBPATH' => ENV['EP3_LIBPATH'] }, "sh run.sh 2> .ep3/system/job.log", :chdir => dir)
+    sleep 2
+    open(File.join(dir, 'status', 'inputs.json'), 'w') { |f|
+      f.puts JSON.dump detailed_input(input, dir)
     }
+    Process.waitpid ep3_pid
+    ep3_pid = nil
   rescue Interrupt
     # nop
   ensure
     unless pid.nil?
       Process.kill :TERM, pid
+    end
+    unless ep3_pid.nil?
+      Process.kill :INT, ep3_pid
     end
     Process.waitall
   end

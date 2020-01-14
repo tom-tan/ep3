@@ -219,7 +219,7 @@ def cmdnet(cwl, ids)
   net << Transition.new(in_: [Place.new('CommandGeneration.return', '*')], out: [Place.new('CommandGeneration', 'permanentFailure')])
 
   net << Transition.new(in_: [Place.new('Execution', 'wip'), Place.new('CommandGeneration.command', '*')],
-                        out: [Place.new('Execution.return', 'RETURN')],
+                        out: [Place.new('Execution.return', 'RETURN'), Place.new('Execution.stdout', 'STDOUT'), Place.new('Execution.stderr', 'STDERR')],
                         command: %Q!eval '\\$(cat $STATE_DIR/CommandGeneration.command)'!,
                         name: 'execute')
   net << Transition.new(in_: [Place.new('Execution', 'success')], out: [Place.new('StageOut', 'wip')],
