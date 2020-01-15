@@ -56,7 +56,7 @@ def wfnet2entr(net)
             %Q!$STATE_DIR/#{v}!
           end
         }.join('\n')
-        %Q!echo "#{inp}" | entr -prsn "#{to_command(t)}"&!
+        %Q!printf "#{inp}\\n" | entr -prsn "#{to_command(t)}"&!
       }
     else
       command = ts.chunk{ |t| t.in }.map{ |ch| ch[1] }.map{ |ch|
@@ -71,7 +71,7 @@ def wfnet2entr(net)
           %Q!$STATE_DIR/#{v}!
         end
       }.join('\n')
-      %Q!echo "#{inp}" | entr -prsn "#{command}"&!
+      %Q!printf "#{inp}\\n" | entr -prsn "#{command}"&!
     end
   }.flatten
 
