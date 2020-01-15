@@ -1,0 +1,25 @@
+version: "3.7"
+services:
+  dind:
+    image: docker:stable-dind
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: ''
+    working_dir: /workspace
+    volumes:
+      - ..:/workspace
+      - /tmp:/tmp
+    command: dockerd-entrypoint.sh
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DOCKER_HOST: tcp://dind:2375/
+    working_dir: /workspace
+    volumes:
+      - ..:/workspace
+      - /tmp:/tmp
+    command: sleep infinity
+    depends_on:
+      - "dind"
