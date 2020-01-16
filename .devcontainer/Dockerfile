@@ -11,5 +11,3 @@ RUN gem install -N fluentd
 RUN pip3 install cwltest
 
 RUN apk del dev
-
-RUN git clone --depth 1 https://github.com/common-workflow-language/common-workflow-language.git /cwl
