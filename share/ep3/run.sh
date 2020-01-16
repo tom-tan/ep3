@@ -24,7 +24,7 @@ notifyquit="transition -o $target_dir/ep3/control=stop"
 echo $target_dir/status/ExecutionState | entr -prsn "$notifyquit; kill -s USR1 -- $PID"&
 entrpid=$!
 
-trap "$notifyquit; kill -s INT -- $entrpid" INT
-trap "kill -s INT -- $entrpid" USR1
+trap "$notifyquit; kill -s INT $entrpid" INT
+trap "kill -s INT $entrpid" USR1
 
 wait

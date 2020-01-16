@@ -100,7 +100,7 @@ done
 
 #{execs.join("\n")}
 
-trap "kill -s INT  -- #{ps.map{ |p| "$#{p}"}.join(' ')}" USR1
+trap "kill -s INT #{ps.map{ |p| "$#{p}"}.join(' ')}" USR1
 
 wait
 EOS
