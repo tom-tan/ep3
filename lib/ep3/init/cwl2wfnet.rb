@@ -378,7 +378,7 @@ def wfnet(cwl, ids)
       net << Transition.new(in_: [Place.new('inputs.json', '*')],
                             out: [Place.new("steps/#{s.id}/status/hint-#{r.class_}", 'STDOUT')],
                             command: "inspector.rb --evaluate-expressions $CWL .hints.#{r.class_} -i $STATE_DIR/inputs.json",
-                            name: "propagate-hint-#{r}")
+                            name: "propagate-hint-#{r.class_}")
     }
 
     if s.in.empty?
