@@ -173,7 +173,7 @@ def cmdnet(cwl, ids)
   net = PetriNet.new(['ep3', 'system', 'job', *ids, 'main'].join('.'))
 
   net << Transition.new(in_: [Place.new(control, 'stop')], out: [],
-                        command: 'kill -s USR1 -- $PID', name: 'quit')
+                        command: 'kill -s USR1 $PID', name: 'quit')
 
   net << Transition.new(in_: [Place.new('inputs.json', '*')], out: [],
                         name: 'start-execution')
@@ -349,7 +349,7 @@ def wfnet(cwl, ids)
   control = File.join('.', *ids.map{|_| '..'}, 'ep3', 'control')
   net = PetriNet.new(['ep3', 'system', 'job', *ids, 'main'].join('.'))
 
-  net << Transition.new(in_: [Place.new(control, 'stop')], out: [], command: 'kill -s USR1 -- $PID')
+  net << Transition.new(in_: [Place.new(control, 'stop')], out: [], command: 'kill -s USR1 $PID')
 
   net << Transition.new(in_: [Place.new('inputs.json', '*')], out: [],
                         name: 'start-execution')
