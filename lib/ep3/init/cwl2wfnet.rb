@@ -445,15 +445,25 @@ def wfnet(cwl, ids)
                 src.map{ |s_| s_.sub(/\//, '_') }
               end
       i = i+src.length unless src.empty?
-      [%Q!\\"#{param}\\": #{val}!, label]
+      [%Q!\\"#{param}\\": #{val.gsub(/"/, '\\"')}!, label]
     }.transpose
 
-    unless jqparams.empty? or ps.empty?
+    unless jqparams.empty?
       inp = ps.flatten.map{ |p| Place.new(p, '*') }
-      net << Transition.new(in_: inp,
-                            out: [Place.new("steps/#{step}/status/inputs.json", 'STDOUT')],
-                            command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].flatten.compact.map{ |p| File.join('$STATE_DIR', p) }.join(' ') }!,
-                            name: "start-#{step}")
+      if inp.empty?
+        inp = [Place.new('inputs.json', '*')]
+      end
+      tr_name = "start-#{step}"
+      if ps.empty?
+        net << Transition.new(in_: inp,
+                              out: [Place.new("steps/#{step}/status/inputs.json", "'{ #{jqparams[0].join(', ') } }'")],
+                              name: tr_name)
+      else
+        net << Transition.new(in_: inp,
+                              out: [Place.new("steps/#{step}/status/inputs.json", 'STDOUT')],
+                              command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].flatten.compact.map{ |p| File.join('$STATE_DIR', p) }.join(' ') }!,
+                              name: tr_name)
+      end
     end
 
     net << Transition.new(in_: [Place.new("steps/#{step}/status/ExecutionState", 'success')],
