@@ -65,6 +65,8 @@ jobs:
         mkdir -p conformance/ep3/cwl_${cwlVersion}
         rm -rf conformance/ep3/cwl_${cwlVersion}/ep3_latest
         cp -r $GITHUB_WORKSPACE/cwl/${cwlVersion}/badges conformance/ep3/cwl_${cwlVersion}/ep3_latest
+        commit=$(echo $GITHUB_SHA | cut -b 6)
+        printf '{ "subject": "commit", "status": "%s", "color": "blue" }' $commit > conformance/ep3/cwl_${cwlVersion}/ep3_latest/commit.json
 
         git add conformance/ep3/cwl_${cwlVersion}/ep3_latest
         git config user.name "ep3 bot"
