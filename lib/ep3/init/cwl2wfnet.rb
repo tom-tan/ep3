@@ -445,7 +445,7 @@ def wfnet(cwl, ids)
                 src.map{ |s_| s_.sub(/\//, '_') }
               end
       i = i+src.length unless src.empty?
-      [%Q!\\"#{param}\\": #{val.gsub(/"/, '\\"')}!, label]
+      [%Q!\\"#{param}\\": #{val.gsub(/"/, '\\"').gsub(/\$/, '\\$')}!, label]
     }.transpose
 
     unless jqparams.empty?
