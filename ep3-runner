@@ -15,7 +15,7 @@ def run_cmd(cmd, debug)
     'tag' => 'ep3.system', 'time' => Time.now.iso8601(9).sub(/\./, ','),
   }
   if debug
-    puts JSON.dump hash
+    warn JSON.dump hash
   end
   hash
 rescue Interrupt

@@ -40,7 +40,7 @@ See `ep3-runner --help` for details.
 ```console
 $ ep3-runner <cwl> [job]
 ```
-It prints the log and debug outputs in [JSON Lines](http://jsonlines.org) format.
+It prints the log and debug outputs to stderr and prints the output object to stdout. Both types of outputs are printed in [JSON Lines](http://jsonlines.org) format.
 
 Here is an example:
 ```console

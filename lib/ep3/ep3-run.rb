@@ -16,7 +16,8 @@ def run_fluentd(target_dir, template_dir, quiet, debug)
 
   logger_path = File.join(ENV['EP3_LIBPATH'], 'run')
   spawn({ 'PATH' => "#{logger_path}:#{ENV['PATH']}"},
-        'fluentd -qqc fluentd/fluentd.conf', :chdir => target_dir)
+        'fluentd -qqc fluentd/fluentd.conf',
+        :chdir => target_dir, :out => :err)
 end
 
 def detailed_input(input, dir)
@@ -85,7 +86,9 @@ def ep3_run(args)
                     opts.include?('quiet'), opts.include?('debug'))
   ep3_pid = nil
   begin
-    ep3_pid = spawn({ 'EP3_LIBPATH' => ENV['EP3_LIBPATH'] }, "sh run.sh 2> .ep3/system/job.log", :chdir => dir)
+    ep3_pid = spawn({ 'EP3_LIBPATH' => ENV['EP3_LIBPATH'] },
+                    "sh run.sh",
+                    :chdir => dir, :err => [File.join(dir, '.ep3','system', 'job.log'), 'w'])
     sleep 2
     open(File.join(dir, 'status', 'inputs.json'), 'w') { |f|
       f.puts JSON.dump detailed_input(input, dir)
