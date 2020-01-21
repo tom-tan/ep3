@@ -475,7 +475,7 @@ def wfnet(cwl, ids)
                             command: %Q!jq -c '.#{o.id}' steps/#{step}/status/cwl.output.json!)
     }
     net << Transition.new(in_: [Place.new("steps/#{step}/status/ExecutionState", '*')],
-                          out: [Place.new("ExecutionState", 'STDOUT')],
+                          out: [Place.new("#{step}_ExecutionState", 'STDOUT'), Place.new("ExecutionState", 'STDOUT')],
                           command: "cat steps/#{step}/status/ExecutionState",
                           name: "notify-#{step}-result")
   }
