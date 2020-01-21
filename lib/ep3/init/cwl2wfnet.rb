@@ -476,7 +476,7 @@ def wfnet(cwl, ids)
     }
     net << Transition.new(in_: [Place.new("steps/#{step}/status/ExecutionState", '*')],
                           out: [Place.new("ExecutionState", 'STDOUT')],
-                          command: "cat $STATE_DIR/ExecutionState",
+                          command: "cat steps/#{step}/status/ExecutionState",
                           name: "notify-#{step}-result")
   }
 
