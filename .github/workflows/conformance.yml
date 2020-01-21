@@ -59,7 +59,7 @@ jobs:
     - name: Run conformance test
       run: |
         cd cwl
-        ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner --badgedir=badges --junit-xml=junit.xml --timeout=30 || true
+        ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner EXTRA='--debug' --badgedir=badges --junit-xml=junit.xml --timeout=30 || true
         cd $GITHUB_WORKSPACE
     - name: Save badges
       if: success() && github.event_name == 'push'
