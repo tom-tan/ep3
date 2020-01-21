@@ -84,6 +84,6 @@ jobs:
     - uses: actions/upload-artifact@v1
       with:
         name: junit.xml
-        path: v1.0/junit.xml
+        path: cwl/v1.0/junit.xml
     - uses: mxschmitt/action-tmate@v1
       if: false
