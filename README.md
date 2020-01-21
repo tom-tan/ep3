@@ -23,10 +23,10 @@ Notes:
 
 ## Requirements
 - [entr](http://entrproject.org)
-- Ruby 2.5.1 or later
-- Fluentd 1.3.3 or later
-- jq
-- nodejs for `InlineJavascriptRequirement`
+- [Ruby](https://www.ruby-lang.org) 2.5.1 or later
+- [Fluentd](https://www.fluentd.org) 1.3.3 or later
+- [jq](https://stedolan.github.io/jq/)
+- [nodejs](https://nodejs.org) for `InlineJavascriptRequirement`
 
 ## How to install
 - Install `entr`, `jq`, `ruby`, `nodejs`, and `fluentd`
@@ -35,16 +35,14 @@ Notes:
 $ git clone --recursive https://github.com/tom-tan/ep3.git
 ```
 
-## How to test
+## Usage
+See `ep3-runner --help` for details.
 ```console
-$ git clone --recursive https://github.com/tom-tan/ep3.git
-$ cd ep3
-$ cwltest --tool $PWD/ep3-runner --test test.yml
-Test [1/1] Workflow example
-All tests passed
+$ ep3-runner <cwl> [job]
 ```
+It prints the log and debug outputs in [JSON Lines](http://jsonlines.org) format.
 
-## Example
+Here is an example:
 ```console
 $ ep3-runner --quiet /path/to/ep3/examples/workflow.cwl /path/to/ep3/examples/inputs.yml | jq .
 {
@@ -63,6 +61,14 @@ $ ep3-runner --quiet /path/to/ep3/examples/workflow.cwl /path/to/ep3/examples/in
 ```
 
 ## For developers
+### How to test
+```console
+$ git clone --recursive https://github.com/tom-tan/ep3.git
+$ cd ep3
+$ cwltest --tool $PWD/ep3-runner --test test.yml
+Test [1/1] Workflow example
+All tests passed
+```
 
 ### ep3 internals
 The `ep3-runner` command consists of the following internal commands:
@@ -83,6 +89,6 @@ The `ep3-runner` command consists of the following internal commands:
 The `checks` badge represents the CI result of the latest commit in master branch.
 
 - ![success](https://badgen.net/badge/checks/success/green?icon=commonwl)
-  - It passes the basic test. CI also runs the conformance test for this commit. The conformance badges will be available once CI passes the basic test.
+  - It passes the basic test. The CI runner also runs the conformance test for this commit. The [section of conformance test](#conformance-test-for-cwl-v10) will show the result of the conformance test with the latest successful commit of ep3.
 - ![failure](https://badgen.net/badge/checks/failure/red?icon=commonwl)
-  - It does not pass the basic test. CI skips the conformance test for this commit because it does not work with the most or all the CWL documents.
+  - It does not pass the basic test. The CI runner skips the conformance test for this commit because it does not work with the most or all the CWL documents.
