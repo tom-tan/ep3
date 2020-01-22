@@ -18,8 +18,8 @@ ep3 version: ![commit](https://badgen.net/https/raw.githubusercontent.com/tom-ta
 
 Notes:
 - ep3 will not pass the test #61 with `required` and `command_line_tool` tags due to [common-workflow-language#761](https://github.com/common-workflow-language/common-workflow-language/issues/761).
-- Currently `ScatterFeatureRequirement` and `StepInputExpressionRequirement` are not supported.
-  - It affects the result of `Workflow`, `InlineJavascriptRequirement` and `MultipleInputFeatureRequirement`.
+- Currently `ScatterFeatureRequirement` (`scatter` badge) and `StepInputExpressionRequirement` (`step_input` badge) are not supported.
+  - It affects the result of the tests of `Workflow` (`workflow` tag), `InlineJavascriptRequirement` (`inline_javascript` tag) and `MultipleInputFeatureRequirement` (`multiple_input` tag).
 
 ## Requirements
 - [entr](http://entrproject.org)
