@@ -12,6 +12,7 @@ def ep3_init(args)
   parser.banner = "Usage: ep3 init [options] <cwl>"
   parser.on('--target-dir=DIR')
   parser.on('--force')
+  parser.on('--print-dot')
   opts = parser.getopts(args)
 
   unless args.length == 1
@@ -52,6 +53,11 @@ def ep3_init(args)
       open(File.join(n[:destination], 'job.sh'), 'w') { |f|
         f.puts wfnet2entr(n[:net])
       }
+      if opts.include? 'print-dot'
+        open(File.join(n[:destination], 'net.dot'), 'w') { |f|
+          f.puts n[:net].to_dot
+        }
+      end
     }
 
     # TODO fix it
