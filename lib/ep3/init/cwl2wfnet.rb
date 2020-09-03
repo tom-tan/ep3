@@ -184,7 +184,6 @@ def cmdnet(cwl, extra_path, ids)
                         out: [Place.new('Allocation.err', 'STDERR'), Place.new('Allocation.return', 'RETURN'), Place.new('Allocation.resource', 'STDOUT')],
                         command: 'allocate $CWL $STATE_DIR/inputs.json',
                         name: 'allocate')
-  # net << Transition.new(in_: [Place.new('Allocation', 'wip'), Place.new('reconf.command')], out: [Place.new('Allocation', 'success')], name: 'allocate-fallback')
   net << Transition.new(in_: [Place.new('Allocation', 'success')], out: [Place.new('StageIn', 'wip')], name: 'to-staging-in')
   net << Transition.new(in_: [Place.new('Allocation', 'permanentFailure')], out: [Place.new('ExecutionState', 'permanentFailure')], name: 'permanent-fail-allocation')
 
@@ -277,8 +276,6 @@ def cmdnet(cwl, extra_path, ids)
   net << Transition.new(in_: [Place.new('StageOut.return', '0')], out: [Place.new('StageOut', 'success')])
   net << Transition.new(in_: [Place.new('StageOut.return', '*')], out: [Place.new('StageOut', 'permanentFailure')])
 
-#  net << Transition.new(in_: [Place.new('Deallocation', 'wip'), Place.new('deallocate.command')], out: [Place.new('Deallocation', 'success')],
-#                        name: 'deallocate-fallback')
   net << Transition.new(in_: [Place.new('Deallocation', 'wip'), Place.new('Allocation.resource', '*')],
                         out: [Place.new('Deallocation.return', 'RETURN'), Place.new('Deallocation.err', 'STDERR')],
                         command: %Q!deallocate $STATE_DIR/Allocation.resource!,
