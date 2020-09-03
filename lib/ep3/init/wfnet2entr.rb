@@ -87,7 +87,7 @@ def wfnet2entr(net)
 STATE_DIR=status
 CWL=cwl/job.cwl
 EP3_TAG=#{net.tag}
-PATH=$EP3_LIBPATH/runtime:$PATH
+PATH=#{net.extra_path}:$EP3_LIBPATH/runtime:$PATH
 SHELL=/bin/sh
 PID=$$
 

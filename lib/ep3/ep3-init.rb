@@ -13,6 +13,7 @@ def ep3_init(args)
   parser.on('--target-dir=DIR')
   parser.on('--force')
   parser.on('--print-dot')
+  parser.on('--extra-path=PATH')
   opts = parser.getopts(args)
 
   unless args.length == 1
@@ -46,9 +47,11 @@ def ep3_init(args)
         else
           Dir.mktmpdir
         end
+  
+  extra_path = opts.fetch('extra-path', File.join('$EP3_LIBPATH', 'executor'))
 
   begin
-    nets = cwl2wfnet(cwl, dst)
+    nets = cwl2wfnet(cwl, dst, extra_path)
     nets.each{ |n|
       open(File.join(n[:destination], 'job.sh'), 'w') { |f|
         f.puts wfnet2entr(n[:net])

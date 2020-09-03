@@ -15,7 +15,7 @@ UnsupportedRequirements = [
   'ScatterFeatureRequirement', 'StepInputExpressionRequirement',
 ]
 
-def cwl2wfnet(cfile, dst)
+def cwl2wfnet(cfile, dst, extra_path)
   if cfile.match(/^(.+)(#.+)/)
     basefile = $1
     target = $2
@@ -30,7 +30,7 @@ def cwl2wfnet(cfile, dst)
                File.expand_path(basefile)
              end
   prepare(basefile, target, dst)
-  convert(dst)
+  convert(dst, extra_path)
 end
 
 def prepare(basefile, cfile, dst, exts = {}, dir = [])
@@ -146,31 +146,31 @@ def replace_extensions(cwl, exts, basedir)
   CommonWorkflowLanguage.load(hash, basedir, {}, hash.fetch('$namespaces', nil))
 end
 
-def convert(dst, ids = [])
+def convert(dst, extra_path, ids = [])
   cwl = CommonWorkflowLanguage.load_file(File.join(dst, 'cwl', 'job.cwl'), false)
   case walk(cwl, '.class')
   when 'CommandLineTool', 'ExpressionTool'
     [
       {
         destination: File.join(*dst),
-        net: cmdnet(cwl, ids),
+        net: cmdnet(cwl, extra_path, ids),
       }
     ]
   when 'Workflow'
     net = {
       destination: File.join(*dst),
-      net: wfnet(cwl, ids),
+      net: wfnet(cwl, extra_path, ids),
     }
     nets = cwl.steps.map{ |s|
-      convert(File.join(dst, 'steps', s.id), ids+['steps', s.id])
+      convert(File.join(dst, 'steps', s.id), extra_path, ids+['steps', s.id])
     }.flatten
     [net, *nets]
   end
 end
 
-def cmdnet(cwl, ids)
+def cmdnet(cwl, extra_path, ids)
   control = File.join('.', *ids.map{|_| '..'}, 'ep3', 'control')
-  net = PetriNet.new(['ep3', 'system', 'job', *ids, 'main'].join('.'))
+  net = PetriNet.new(['ep3', 'system', 'job', *ids, 'main'].join('.'), extra_path)
 
   net << Transition.new(in_: [Place.new(control, 'stop')], out: [],
                         command: 'kill -s USR1 $PID', name: 'quit')
@@ -180,11 +180,11 @@ def cmdnet(cwl, ids)
 
   net << Transition.new(in_: [Place.new('inputs.json', '*')], out: [Place.new('Allocation', 'wip')], name: 'to-allocation')
 
-  net << Transition.new(in_: [Place.new('Allocation', 'wip'), Place.new('reconf.command', '*')],
-                        out: [Place.new('reconf.err', 'STDERR'), Place.new('Allocation.return', 'RETURN')],
-                        command: %Q!eval '\\$(cat $STATE_DIR/reconf.command) -o $STATE_DIR/../reconf'!,
+  net << Transition.new(in_: [Place.new('Allocation', 'wip')],
+                        out: [Place.new('Allocation.err', 'STDERR'), Place.new('Allocation.return', 'RETURN'), Place.new('Allocation.resource', 'STDOUT')],
+                        command: 'allocate $CWL $STATE_DIR/inputs.json',
                         name: 'allocate')
-  net << Transition.new(in_: [Place.new('Allocation', 'wip'), Place.new('reconf.command')], out: [Place.new('Allocation', 'success')], name: 'allocate-fallback')
+  # net << Transition.new(in_: [Place.new('Allocation', 'wip'), Place.new('reconf.command')], out: [Place.new('Allocation', 'success')], name: 'allocate-fallback')
   net << Transition.new(in_: [Place.new('Allocation', 'success')], out: [Place.new('StageIn', 'wip')], name: 'to-staging-in')
   net << Transition.new(in_: [Place.new('Allocation', 'permanentFailure')], out: [Place.new('ExecutionState', 'permanentFailure')], name: 'permanent-fail-allocation')
 
@@ -218,9 +218,9 @@ def cmdnet(cwl, ids)
   net << Transition.new(in_: [Place.new('CommandGeneration.return', '0')], out: [Place.new('CommandGeneration', 'success')])
   net << Transition.new(in_: [Place.new('CommandGeneration.return', '*')], out: [Place.new('CommandGeneration', 'permanentFailure')])
 
-  net << Transition.new(in_: [Place.new('Execution', 'wip'), Place.new('CommandGeneration.command', '*')],
+  net << Transition.new(in_: [Place.new('Execution', 'wip'), Place.new('Allocation.resource', '*'), Place.new('CommandGeneration.command', '*')],
                         out: [Place.new('Execution.return', 'RETURN'), Place.new('Execution.stdout', 'STDOUT'), Place.new('Execution.stderr', 'STDERR')],
-                        command: %Q!executor $STATE_DIR/CommandGeneration.command!,
+                        command: %Q!execute --resource=$STATE_DIR/Allocation.resource $STATE_DIR/CommandGeneration.command!,
                         name: 'execute')
   net << Transition.new(in_: [Place.new('Execution', 'success')], out: [Place.new('StageOut', 'wip')],
                         name: 'to-staging-out')
@@ -277,8 +277,12 @@ def cmdnet(cwl, ids)
   net << Transition.new(in_: [Place.new('StageOut.return', '0')], out: [Place.new('StageOut', 'success')])
   net << Transition.new(in_: [Place.new('StageOut.return', '*')], out: [Place.new('StageOut', 'permanentFailure')])
 
-  net << Transition.new(in_: [Place.new('Deallocation', 'wip'), Place.new('deallocate.command')], out: [Place.new('Deallocation', 'success')],
-                        name: 'deallocate-fallback')
+#  net << Transition.new(in_: [Place.new('Deallocation', 'wip'), Place.new('deallocate.command')], out: [Place.new('Deallocation', 'success')],
+#                        name: 'deallocate-fallback')
+  net << Transition.new(in_: [Place.new('Deallocation', 'wip'), Place.new('Allocation.resource', '*')],
+                        out: [Place.new('Deallocation.return', 'RETURN'), Place.new('Deallocation.err', 'STDERR')],
+                        command: %Q!deallocate $STATE_DIR/Allocation.resource!,
+                        name: 'deallocate')
   net << Transition.new(in_: [Place.new('Deallocation.return', '0')], out: [Place.new('Deallocation', 'success')])
   net << Transition.new(in_: [Place.new('Deallocation.return', '*')], out: [Place.new('Deallocation', 'permanentFailure')])
 
@@ -345,9 +349,9 @@ def default_inputs_for_steps(cwl)
   }
 end
 
-def wfnet(cwl, ids)
+def wfnet(cwl, extra_path, ids)
   control = File.join('.', *ids.map{|_| '..'}, 'ep3', 'control')
-  net = PetriNet.new(['ep3', 'system', 'job', *ids, 'main'].join('.'))
+  net = PetriNet.new(['ep3', 'system', 'job', *ids, 'main'].join('.'), extra_path)
 
   net << Transition.new(in_: [Place.new(control, 'stop')], out: [], command: 'kill -s USR1 $PID')
 

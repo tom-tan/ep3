@@ -1,0 +1,10 @@
+#!/bin/sh
+
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 --resource=<file> <command-file>"
+    exit 0
+fi
+
+not_used=$1
+
+executor "$2"
