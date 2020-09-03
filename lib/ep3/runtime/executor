@@ -17,6 +17,12 @@ if $0 == __FILE__
   end
 
   cmd = open(command_file).readlines.join
+  cmd = insert_cidarg(cmd)
   system(cmd)
   exit $?.exitstatus
+end
+
+def insert_cidarg(cmd)
+  state_dir=ENV['STATE_DIR']
+  cmd.sub('--rm', "--cidfile=#{state_dir}/cid")
 end
