@@ -1,13 +1,18 @@
 #!/usr/bin/env ruby
 require 'optparse'
 
+def insert_cidarg(cmd, cidopt)
+  cmd.sub('--rm', cidopt)
+end
+
 if $0 == __FILE__
-  opt = OptionParser.new
-  opt.banner = "Usage: #{$0} [options] <command-file>"
-  opt.parse!(ARGV)
+  parser = OptionParser.new
+  parser.banner = "Usage: #{$0} [options] <command-file>"
+  parser.on('--cidfile=[FILE]')
+  opts = parser.getopts(ARGV)
 
   unless ARGV.length == 1
-    puts opt.help
+    puts parser.help
     exit
   end
 
@@ -17,12 +22,7 @@ if $0 == __FILE__
   end
 
   cmd = open(command_file).readlines.join
-  cmd = insert_cidarg(cmd)
+  cmd = insert_cidarg(cmd, opts['cidfile']) if opts.include? 'cidfile'
   system(cmd)
   exit $?.exitstatus
-end
-
-def insert_cidarg(cmd)
-  state_dir=ENV['STATE_DIR']
-  cmd.sub('--rm', "--cidfile=#{state_dir}/cid")
 end

@@ -178,6 +178,10 @@ def cmdnet(cwl, extra_path, ids)
   net << Transition.new(in_: [Place.new('inputs.json', '*')], out: [],
                         name: 'start-execution')
 
+  net << Transition.new(in_: [Place.new('inputs.json', '*')], out: [Place.new('start_date', 'STDOUT')],
+                        command: %Q!env LANG=C date +'%Y-%m-%d %H:%M:%S'!,
+                        name: 'start-date')
+
   net << Transition.new(in_: [Place.new('inputs.json', '*')], out: [Place.new('Allocation', 'wip')], name: 'to-allocation')
 
   net << Transition.new(in_: [Place.new('Allocation', 'wip')],
@@ -219,7 +223,7 @@ def cmdnet(cwl, extra_path, ids)
 
   net << Transition.new(in_: [Place.new('Execution', 'wip'), Place.new('Allocation.resource', '*'), Place.new('CommandGeneration.command', '*')],
                         out: [Place.new('Execution.return', 'RETURN'), Place.new('Execution.stdout', 'STDOUT'), Place.new('Execution.stderr', 'STDERR')],
-                        command: %Q!execute --resource=$STATE_DIR/Allocation.resource $STATE_DIR/CommandGeneration.command!,
+                        command: %Q!execute --resource=$STATE_DIR/Allocation.resource --cidfile=$STATE_DIR/cid $STATE_DIR/CommandGeneration.command!,
                         name: 'execute')
   net << Transition.new(in_: [Place.new('Execution', 'success')], out: [Place.new('StageOut', 'wip')],
                         name: 'to-staging-out')
@@ -282,6 +286,10 @@ def cmdnet(cwl, extra_path, ids)
                         name: 'deallocate')
   net << Transition.new(in_: [Place.new('Deallocation.return', '0')], out: [Place.new('Deallocation', 'success')])
   net << Transition.new(in_: [Place.new('Deallocation.return', '*')], out: [Place.new('Deallocation', 'permanentFailure')])
+
+  net << Transition.new(in_: [Place.new('ExecutionState', '*'), Place.new('start_date', '*')], out: [Place.new('metrics.json', 'STDOUT')],
+                        command: %Q!ep3-log-generator \\"\\$(cat $STATE_DIR/start_date)\\" \\"\\$(env LANG=C date +'%Y-%m-%d %H:%M:%S')\\" $STATE_DIR!,
+                        name: 'generate-metrics')
 
   net << Transition.new(in_: [Place.new('ExecutionState', '*')], out: [],
                         name: 'finish-execution')
@@ -354,6 +362,10 @@ def wfnet(cwl, extra_path, ids)
 
   net << Transition.new(in_: [Place.new('inputs.json', '*')], out: [],
                         name: 'start-execution')
+
+  net << Transition.new(in_: [Place.new('inputs.json', '*')], out: [Place.new('start_date', 'STDOUT')],
+                        command: %Q!env LANG=C date +'%Y-%m-%d %H:%M:%S'!,
+                        name: 'start-date')
 
   cwl.steps.each{ |s|
     propagated = (cwl.requirements.map{ |r| r.class_ } +
@@ -470,6 +482,10 @@ def wfnet(cwl, extra_path, ids)
     net << Transition.new(in_: [Place.new("steps/#{step}/status/ExecutionState", 'success')],
                           out: [Place.new("#{step}_ExecutionState", 'success')],
                           name: "notify-#{step}-result")
+    net << Transition.new(in_: [Place.new("steps/#{step}/status/metrics.json", '*')],
+                          out: [Place.new("#{step}_metrics.json", 'STDOUT')],
+                          command: "cat steps/#{step}/status/metrics.json",
+                          name: "notify-#{step}-metrics")
     s.out.each{ |o|
       net << Transition.new(in_: [Place.new("steps/#{step}/status/ExecutionState", 'success')],
                             out: [Place.new("#{step}_#{o.id}", 'STDOUT')],

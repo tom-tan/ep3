@@ -1,0 +1,63 @@
+#!/usr/bin/env ruby
+require 'optparse'
+require 'json'
+require 'yaml'
+
+def jobinfo(start, end_, dir)
+    inputs = open(File.join(dir, 'cwl.inputs.json')) { |f|
+        JSON.load(f)
+    }
+    outputs = open(File.join(dir, 'cwl.output.json')) { |f|
+        JSON.load(f)
+    }
+    cid = open(File.join(dir, 'cid')).readlines.join
+    runtime = JSON.parse(`docker info --format '{{json .}}' | jq '{ "running_containers": .ContainerRunning, "server_version": .ServerVersion, "storage_driver": .Driver, "number_of_cpu": .NCPU, "total_memory": .MemTotal }'`)
+    process = JSON.parse(`docker inspect #{cid} | jq "{ \"id\": \\"#{cid}\\", \"image\": .[0].Config.Image, \"cmd\": .[0].Config.Cmd, \"status\": .[0].State.Status, \"start_time\": .[0].State.StartedAt, \"end_time\": .[0].State.FinishedAt, \"exit_code\": .[0].State.ExitCode }"`)
+    process['cmd'] = process['cmd'].join(' ')
+    status = if open(File.join(dir, 'ExecutionState')).readlines.join.chomp == 'success'
+                'success'
+             else
+                'failed'
+             end
+    {
+        step_name: File.basename(File.absolute_path(File.join(dir, '..'))),
+        start_date: start,
+        end_date: end_,
+        cwl_file: 'job.cwl',
+        tool_status: status,
+        inputs: inputs,
+        outputs: outputs,
+        container: {
+            process: process,
+            runtime: runtime,
+        },
+        platform: {
+            hostname: nil,
+            ncpu_cores: nil,
+            total_memory: nil,
+            disk_size: nil,
+        }
+    }
+end
+
+if $0 == __FILE__
+    Signal.trap(:INT, 'IGNORE')
+    opt = OptionParser.new
+    opt.banner = "Usage: #{$0} <start> <end> <basedir>"
+    opt.parse!(ARGV)
+
+    unless ARGV.length == 3
+        puts opt.help
+        exit
+    end
+
+    start, end_, dir = ARGV
+    cwl = YAML.load_file(File.join(dir, '..', 'cwl', 'job.cwl'))
+    metrics = case cwl['class']
+              when 'CommandLineTool'
+                jobinfo(start, end_, dir)
+              when 'Workflow'
+                workflowinfo(start, end_, dir)
+              end
+    puts JSON.dump(metrics)
+end

@@ -1,10 +1,11 @@
 #!/bin/sh
 
 if [ $# -eq 0 ]; then
-    echo "Usage: $0 --resource=<file> <command-file>"
+    echo "Usage: $0 --resource=<file> --cidfile=<filename> <command-file>"
     exit 0
 fi
 
 not_used=$1
+cidfile=$2
 
-executor "$2"
+executor --cidfile=$2 "$3"

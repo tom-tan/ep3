@@ -48,7 +48,11 @@ def ep3_init(args)
           Dir.mktmpdir
         end
   
-  extra_path = opts.fetch('extra-path', File.join('$EP3_LIBPATH', 'executor'))
+  extra_path = opts.fetch('extra-path', 
+                          [
+                            File.join('$EP3_LIBPATH', 'executor'),
+                            File.join('$EP3_LIBPATH', 'metrics'),
+                          ].join(':'))
 
   begin
     nets = cwl2wfnet(cwl, dst, extra_path)
