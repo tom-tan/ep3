@@ -40,6 +40,40 @@ def jobinfo(start, end_, dir)
     }
 end
 
+def workflowinfo(start, end_, dir)
+    inputs = open(File.join(dir, 'inputs.json')) { |f|
+        JSON.load(f)
+    }
+    outputs = open(File.join(dir, 'cwl.output.json')) { |f|
+        JSON.load(f)
+    }
+    {
+        cwl_metrics_version: '0.1.18',
+        metrics_generator: {
+            name: 'ep3-log-generator',
+            version: '0.0'
+        },
+        workflow: {
+            start_date: start,
+            end_date: end_,
+            cwl_file: 'job.cwl',
+            genome_version: nil,
+            inputs: inputs,
+            outputs: outputs,
+        },
+        steps: Hash[
+            Dir.glob('*', base: File.join(dir, '..', 'steps')).map{ |step|
+                [
+                    step,
+                    open(File.join(dir, "#{step}_metrics.json")) { |f|
+                        JSON.load(f)
+                    }
+                ]
+            }
+        ]
+    }
+end
+
 if $0 == __FILE__
     Signal.trap(:INT, 'IGNORE')
     opt = OptionParser.new

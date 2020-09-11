@@ -511,6 +511,12 @@ def wfnet(cwl, extra_path, ids)
                           command: "jq -c . $STATE_DIR/#{sourceLabel}")
   }
 
+  allMetrics = cwl.steps.map{ |s| Place.new("#{s.id}_metrics.json", '*')}
+  net << Transition.new(in_: allMetrics,
+                        out: [Place.new('metrics.json', 'STDOUT')],
+                        command: %Q!ep3-log-generator \\"\\$(cat $STATE_DIR/start_date)\\" \\"\\$(env LANG=C date +'%Y-%m-%d %H:%M:%S')\\" $STATE_DIR!,
+                        name: 'generate-metrics')
+
   resultPlaces = cwl.steps.map{ |s| Place.new("#{s.id}_ExecutionState", 'success') }
 
   if cwl.outputs.empty?
