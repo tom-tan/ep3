@@ -1,0 +1,74 @@
+#!/usr/bin/env ruby
+# coding: utf-8
+require 'optparse'
+require 'json'
+require 'net/http'
+require_relative '../runtime/inspector'
+
+def parse_option_file(file)
+  if File.exist? file
+    open(file) { |f|
+      JSON.load(f)
+    }
+  else
+    {}
+  end
+end
+
+def get_request(endpoint)
+  uri = URI.parse(endpoint)
+  http = Net::HTTP.new(uri.host, uri.port)
+  headers = { 'Content-Type' => 'application/json' }
+  response = http.get(uri.path, headers)
+
+  raise "Error in `#{endpoint}`: #{response.body}" if response.code != '201'
+
+  JSON.load(response.body)
+  # {
+  #   delete_id: xxx,
+  #   request_id: xxx,
+  #   done: false
+  # }
+end
+
+if $0 == __FILE__
+  options = {
+    'ra' nil,
+  }
+  timeout = 10*60 # 10 min.
+  opt_file = '.reconf.json'
+  opt = OptionParser.new
+  opt.banner = "Usage: #{$0} [options] res-id"
+  # common options
+  # res-id: A resource ID
+  opt.on('--timeout=TO', "Timeout in seconds (default: #{timeout} sec.)") { |to|
+    timeout = to.to_i
+  }
+  opt.on('--config=FILE',
+         "A file name for configuration params such as ra and ms endpoints (default: #{opt_file})") { |f|
+    unless File.exist? f
+      warn "File not found: #{f}"
+      exit 1
+    end
+    opt_file = f
+  }
+
+  # reconf deallocator specific options
+  opt.on('--ra-endpoint=RA', 'An endpoint to an resource allocator') { |ra|
+    options['ra'] = ra
+  }
+
+  opt.parse!(ARGV)
+  unless ARGV.length == 1
+    puts opt.help
+    exit
+  end
+
+  id = *ARGV
+
+  options = parse_option_file(opt_file).merge(options)
+  ra_server = options['ra']
+
+  body = get_request("#{ra_server}/delete/#{id}")
+  puts JSON.dump(body)
+end
