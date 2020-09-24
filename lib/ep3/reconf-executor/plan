@@ -1,6 +1,211 @@
 #!/usr/bin/env ruby
+# coding: utf-8
+require 'optparse'
+require 'json'
+require 'net/http'
+require 'securerandom'
+require_relative '../runtime/inspector'
 
+def parse_option_file(file)
+  if File.exist? file
+    open(file) { |f|
+      JSON.load(f)
+    }
+  else
+    {}
+  end
+end
+
+def cwl_to_galaxy_params(id, cwl_file)
+    cwl = CommonWorkflowLanguage.load_file(File.join('steps', id, 'cwl', 'job.cwl'))
+    container = get_requirement(cwl, 'DockerRequirement').dockerPull
+    container_name = if container.include? ':'
+                        container.split(':')[0]
+                     else
+                        container
+                     end
+    container_tag = if container.include? ':'
+                        container.split(':')[1]
+                    else
+                        'latest'
+                    end
+    {
+        annotation: "",
+        content_id: container_name,
+        errors: nil,
+        inputs: cwl.inputs.keep_if{ |inp|
+            inp.type.instance_of?(CWLType) and inp.type.type == 'File'
+        }.map{ |inp|
+            {
+                description: inp.doc,
+                name: inp.id,
+            }
+        },
+        label: id,
+        name: id,
+        outputs: cwl.outputs.keep_if{ |out|
+            out.type == 'File'
+        }.map{ |out|
+            {
+                name: out.id,
+                type: nil,
+            }
+        },
+        tool_id: container_name,
+        tool_version: container_tag,
+        type: 'tool',
+        uuid: nil,
+        workflow_outputs: nil,
+    }
+end
+
+def to_prepare_params(cwl_file, params_file, reqs_file, id)
+    cwl = CommonWorkflowLanguage.load_file(cwl_file)
+    params = open(params_file) { |f|
+        JSON.load(f)
+    }
+    reqs = open(reqs_file) { |f|
+        JSON.load(f)
+    }
+    {
+        workflow_name: cwl_file,
+        as_objoctives: reqs,
+        workflow_invocation_id: id,
+        workflow_body: {
+            workflow_name: cwl_file,
+            workflow_invocation_id: '__dummy__',
+            workflow_first_step_inputs: {
+                __unused_field_name__: {
+                    input_params: Hash[params.keep_if{ |k, v|
+                        v.instance_of?(Hash) and v.fetch('class', '') == 'File'
+                    }.map{ |k, v|
+                        [k, v['size']/(1024.0**3)]
+                    }]
+                }
+            },
+            workflow_json: {
+                a_galaxy_workflow: "false",
+                annotation: "",
+                "format-version": "0.1",
+                name: cwl_file,
+                steps: Hash[cwl.steps.map{ |s|
+                    [s.id, cwl_to_galaxy_params(s.id, s.run)]
+                }]
+            }
+        }
+    }
+end
+
+def post_request(endpoint, params)
+  uri = URI.parse(endpoint)
+  http = Net::HTTP.new(uri.host, uri.port)
+  headers = { 'Content-Type' => 'application/json' }
+  response = http.post(uri.path, JSON.dump(params), headers)
+
+  raise "Error in creation: #{response.body}" if response.code != '201'
+
+  JSON.load(response.body)
+  # {
+  #   req_id: xxx
+  # }
+end
+
+def poll(endpoint, timeout)
+  uri = URI.parse(as_server)
+  http = Net::HTTP.new(uri.host, uri.port)
+  headers = { 'Content-Type' => 'application/json' }
+  start = Time.now
+  json = nil
+  (timeout/10.0).ceil.times{
+    response = http.get(uri, headers)
+    json = JSON.load(response.body)
+    if response.code == '200'
+      break if json['done']
+    else
+      warn "Warning: code: #{response.code}, body: #{JSON.dump(response.body)}"
+    end
+
+    break if Time.now-start > timeout
+    sleep 10
+  }
+  json
+end
 
 if $0 == __FILE__
+  options = {
+    'as': nil,
+  }
+  timeout = 10*60 # 10 min.
+  dry_run = false
+  nowait = false
+  opt_file = '.reconf.json'
+  opt = OptionParser.new
+  opt.banner = "Usage: #{$0} [options] cwl params reqs"
+  # common options
+  # cwl: A file name for tool definition
+  # params: A file name for input parameters
+  # user-requirements: A file name for user requirements
+  opt.on('--timeout=TO', "Timeout in seconds (default: #{timeout} sec.)") { |to|
+    timeout = to.to_i
+  }
+  opt.on('--config=FILE',
+         "A file name for configuration params such as ra and ms endpoints (default: #{opt_file})") { |f|
+    unless File.exist? f
+      warn "File not found: #{f}"
+      exit 1
+    end
+    opt_file = f
+  }
+  opt.on('--dry-run', 'Print parameters') {
+    dry_run = true
+  }
+  opt.on('--nowait', 'Post parameters and immediately exit') {
+    nowait = true
+  }
 
+
+  # reconf allocator specific options
+  opt.on('--as-endpoint=AS', 'An endpoint to an application scheduler') { |as|
+    options['as'] = as
+  }
+
+  opt.parse!(ARGV)
+  unless ARGV.length == 3
+    puts opt.help
+    exit
+  end
+
+  cwl, params, reqs = *ARGV
+
+  raise "File not found: #{cwl}" unless File.exist? cwl
+  raise "File not found: #{params}" unless File.exist? params
+  raise "File not found: #{reqs}" unless File.exist? reqs
+
+  options = parse_option_file(opt_file).merge(options)
+  as_server = options['as']
+
+  invocation_id = SecureRandom.uuid
+  ps = to_prepare_params(cwl, params, reqs, invocation_id)
+  if dry_run
+      puts JSON.dump(ps)
+      exit
+  end
+
+  body = post_request("#{as_server}/prepare", ps)
+  if nowait
+    puts JSON.dump({
+        invocation_id: invocation_id,
+        prepare_params: ps,
+        post_response: body,
+    })
+    exit
+  end
+  id = body['req_id']
+  plan = poll("#{as_server}/status/#{id}", timeout)
+  ret = {
+      invocation_id: invocation_id,
+      prepare_params: ps,
+      response: plan,
+  }
+  puts JSON.dump(ret)
 end

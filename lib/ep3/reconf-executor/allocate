@@ -15,18 +15,21 @@ def parse_option_file(file)
   end
 end
 
-def to_reconf_params(cwl_file, params_file)
+def to_reconf_params(cwl_file, params_file, id)
   cwl = CommonWorkflowLanguage.load_file(cwl_file)
   params = open(params_file) { |f|
     JSON.load(f)
   }
   {
-    tool_id: get_requirement(cwl, 'DockerRequirement').dockerPull,
     input_params: Hash[params.keep_if{ |k, v|
       v.instance_of?(Hash) and v.fetch('class', '') == 'File'
     }.map{ |k, v|
       [k, v['size']/(1024.0**3)]
-    }]
+    }],
+    tool_id: get_requirement(cwl, 'DockerRequirement').dockerPull,
+    next_step_uuid: nil,
+    workflow_name: 'job.cwl',
+    workflow_invocation_id: id,
   }
 end
 
@@ -96,9 +99,11 @@ if $0 == __FILE__
     'as': nil,
   }
   timeout = 10*60 # 10 min.
+  dry_run = false
+  nowait = false
   opt_file = '.reconf.json'
   opt = OptionParser.new
-  opt.banner = "Usage: #{$0} [options] cwl params"
+  opt.banner = "Usage: #{$0} [options] cwl params plan-result"
   # common options
   # cwl: A file name for tool definition
   # params: A file name for input parameters
@@ -114,6 +119,12 @@ if $0 == __FILE__
     end
     opt_file = f
   }
+  opt.on('--dry-run', 'Print parameters') {
+    dry_run = true
+  }
+  opt.on('--nowait', 'Post parameters and immediately exit') {
+    nowait = true
+  }
 
   # reconf allocator specific options
   opt.on('--as-endpoint=AS', 'An endpoint to an application scheduler') { |as|
@@ -121,23 +132,41 @@ if $0 == __FILE__
   }
 
   opt.parse!(ARGV)
-  unless ARGV.length == 2
+  unless ARGV.length == 3
     puts opt.help
     exit
   end
 
-  cwl, params = *ARGV
+  cwl, params, plan = *ARGV
 
   raise "File not found: #{cwl}" unless File.exist? cwl
   raise "File not found: #{params}" unless File.exist? params
+  raise "File not found: #{plan}" unless File.exist? plan
 
   options = parse_option_file(opt_file).merge(options)
   as_server = options['as']
 
-  ps = to_reconf_params(cwl, params)
+  invocation_id = open(plan) { |f|
+    JSON.load(f)
+  }['invocation_id']
+
+  ps = to_reconf_params(cwl, params, invocation_id)
+  if dry_run
+    puts JSON.dump(ps)
+    exit
+  end
+
   body = post_request("#{as_server}/reconf", ps)
-  puts JSON.dump(body)
-#  id = body['req_id']
-#  allocated = poll(as_server, body.map{ |k, v| v['request_id'] }, timeout)
-#  puts JSON.dump(Hash[allocated])
+  if nowait
+    puts JSON.dump({
+      invocation_id: invocation_id,
+      reconf_params: ps,
+      post_response: body,
+    })
+    exit
+  end
+  id = body['req_id']
+  # TODO
+  allocated = poll("#{as_server}/status/#{id}", timeout)
+  puts JSON.dump(Hash[allocated])
 end
