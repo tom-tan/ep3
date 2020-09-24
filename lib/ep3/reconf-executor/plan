@@ -111,7 +111,7 @@ def post_request(endpoint, params)
 end
 
 def poll(endpoint, timeout)
-  uri = URI.parse(as_server)
+  uri = URI.parse(endpoint)
   http = Net::HTTP.new(uri.host, uri.port)
   headers = { 'Content-Type' => 'application/json' }
   start = Time.now
@@ -162,7 +162,6 @@ if $0 == __FILE__
   opt.on('--nowait', 'Post parameters and immediately exit') {
     nowait = true
   }
-
 
   # reconf allocator specific options
   opt.on('--as-endpoint=AS', 'An endpoint to an application scheduler') { |as|
