@@ -14,6 +14,32 @@ def jobinfo(start, end_, dir)
     runtime = JSON.parse(`docker info --format '{{json .}}' | jq '{ "running_containers": .ContainerRunning, "server_version": .ServerVersion, "storage_driver": .Driver, "number_of_cpu": .NCPU, "total_memory": .MemTotal }'`)
     process = JSON.parse(`docker inspect #{cid} | jq "{ \"id\": \\"#{cid}\\", \"image\": .[0].Config.Image, \"cmd\": .[0].Config.Cmd, \"status\": .[0].State.Status, \"start_time\": .[0].State.StartedAt, \"end_time\": .[0].State.FinishedAt, \"exit_code\": .[0].State.ExitCode }"`)
     process['cmd'] = process['cmd'].join(' ')
+    resource = if File.exist?(File.join(dir, 'Allocation.resource'))
+                  open(File.join(dir, 'Allocation.resource')) { |f|
+                      JSON.load(f)
+                  }
+               else
+                  {}
+               end
+    platform = if resource.fetch('properties', {}).fetch('provider', '') == 'aws'
+                  props = resource['properties']
+                  {
+                    hostname: nil,
+                    ncpu_cores: props['ncores'],
+                    total_memory: props['memory']*(1024**3),
+                    disk_size: props['storage']*(1024**2),
+                    ec2_ami_id: nil,
+                    ec2_instance_type: props['flavor'],
+                    ec2_region: props['region'],
+                  }
+               else
+                  {
+                    hostname: nil,
+                    ncpu_cores: nil,
+                    total_memory: nil,
+                    disk_size: nil,
+                  }
+               end
     status = if open(File.join(dir, 'ExecutionState')).readlines.join.chomp == 'success'
                 'success'
              else
@@ -31,12 +57,7 @@ def jobinfo(start, end_, dir)
             process: process,
             runtime: runtime,
         },
-        platform: {
-            hostname: nil,
-            ncpu_cores: nil,
-            total_memory: nil,
-            disk_size: nil,
-        }
+        platform: platform,
     }
 end
 
