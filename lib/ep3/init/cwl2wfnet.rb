@@ -184,10 +184,11 @@ def cmdnet(cwl, extra_path, ids)
 
   net << Transition.new(in_: [Place.new('inputs.json', '*')], out: [Place.new('Allocation', 'wip')], name: 'to-allocation')
 
-  net << Transition.new(in_: [Place.new('Allocation', 'wip')],
+  net << Transition.new(in_: [Place.new('Allocation', 'wip'), Place.new('$STATE_DIR/../../../status/plan.json')],
                         out: [Place.new('Allocation.err', 'STDERR'), Place.new('Allocation.return', 'RETURN'), Place.new('Allocation.resource', 'STDOUT')],
-                        command: 'allocate $CWL $STATE_DIR/inputs.json',
+                        command: 'allocate --config $CONFIG $CWL $STATE_DIR/inputs.json $STATE_DIR/../../../status/plan.json',
                         name: 'allocate')
+  # allocate --nowait --config ~/ep3/conf.json cwl/job.cwl status/inputs.json ~/ep3/moomoo/plan-result.json 
   net << Transition.new(in_: [Place.new('Allocation', 'success')], out: [Place.new('StageIn', 'wip')], name: 'to-staging-in')
   net << Transition.new(in_: [Place.new('Allocation', 'permanentFailure')], out: [Place.new('ExecutionState', 'permanentFailure')], name: 'permanent-fail-allocation')
 
@@ -282,7 +283,7 @@ def cmdnet(cwl, extra_path, ids)
 
   net << Transition.new(in_: [Place.new('Deallocation', 'wip'), Place.new('Allocation.resource', '*')],
                         out: [Place.new('Deallocation.return', 'RETURN'), Place.new('Deallocation.err', 'STDERR')],
-                        command: %Q!deallocate $STATE_DIR/Allocation.resource!,
+                        command: %Q!deallocate --config $CONFIG $STATE_DIR/Allocation.resource!,
                         name: 'deallocate')
   net << Transition.new(in_: [Place.new('Deallocation.return', '0')], out: [Place.new('Deallocation', 'success')])
   net << Transition.new(in_: [Place.new('Deallocation.return', '*')], out: [Place.new('Deallocation', 'permanentFailure')])
@@ -366,6 +367,11 @@ def wfnet(cwl, extra_path, ids)
   net << Transition.new(in_: [Place.new('inputs.json', '*')], out: [Place.new('start_date', 'STDOUT')],
                         command: %Q!env LANG=C date +'%Y-%m-%d %H:%M:%S'!,
                         name: 'start-date')
+
+  net << Transition.new(in_: [Place.new('inputs.json', '*')], out: [Place.new('plan.json', 'STDOUT')],
+                        command: %Q!plan --config $CONFIG cwl/job.cwl $STATE_DIR/inputs.json $REQUEST_FILE!, # TODO
+                        name: 'make-plan')
+# plan --config ~/ep3/conf.json cwl/job.cwl ~/ep3/cwl/input.json ~/ep3/user-requirements.json
 
   cwl.steps.each{ |s|
     propagated = (cwl.requirements.map{ |r| r.class_ } +

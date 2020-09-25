@@ -25,10 +25,31 @@ def get_request(endpoint)
 
   JSON.load(response.body)
   # {
-  #   delete_id: xxx,
+  #   delete_id: del-xxx,
   #   request_id: xxx,
   #   done: false
   # }
+end
+
+def poll(endpoint, timeout)
+  uri = URI.parse(endpoint)
+  http = Net::HTTP.new(uri.host, uri.port)
+  headers = { 'Content-Type' => 'application/json' }
+  start = Time.now
+  json = nil
+  (timeout/10.0).ceil.times{
+    response = http.get(uri, headers)
+    json = JSON.load(response.body)
+    if response.code == '200'
+      break if json['done']
+    else
+      warn "Warning: code: #{response.code}, body: #{JSON.dump(response.body)}"
+    end
+
+    break if Time.now-start > timeout
+    sleep 10
+  }
+  json
 end
 
 if $0 == __FILE__
@@ -36,9 +57,10 @@ if $0 == __FILE__
     'ra' nil,
   }
   timeout = 10*60 # 10 min.
+  nowait = false
   opt_file = '.reconf.json'
   opt = OptionParser.new
-  opt.banner = "Usage: #{$0} [options] res-id"
+  opt.banner = "Usage: #{$0} [options] resource"
   # common options
   # res-id: A resource ID
   opt.on('--timeout=TO', "Timeout in seconds (default: #{timeout} sec.)") { |to|
@@ -57,6 +79,9 @@ if $0 == __FILE__
   opt.on('--ra-endpoint=RA', 'An endpoint to an resource allocator') { |ra|
     options['ra'] = ra
   }
+  opt.on('--nowait', 'Post parameters and immediately exit') {
+    nowait = true
+  }
 
   opt.parse!(ARGV)
   unless ARGV.length == 1
@@ -64,11 +89,23 @@ if $0 == __FILE__
     exit
   end
 
-  id = *ARGV
+  res = *ARGV
+  raise "File not found: #{res}" unless File.exist? res
 
   options = parse_option_file(opt_file).merge(options)
   ra_server = options['ra']
 
+  id = open(res) { |f|
+    JSON.load(f)
+  }['result']['resource_req_id']
+
   body = get_request("#{ra_server}/delete/#{id}")
-  puts JSON.dump(body)
+  if nowait
+    puts JSON.dump(body)
+    exit
+  end
+
+  id = body['delete_id']
+  deleted = poll("#{ra_server}/delete_status/#{id}", timeout)
+  puts JSON.dump(deleted)
 end
