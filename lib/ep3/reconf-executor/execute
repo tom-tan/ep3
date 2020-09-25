@@ -5,7 +5,8 @@ if [ $# -eq 0 ]; then
     exit 0
 fi
 
-docker_host=$(cat $1 | jq '.result.endpoint')
-cidfile=$2
+docker_host=$(cat ${$1#--resource=} | jq '.result.endpoint')
+# cidfile=$2
+cidfile=${$2#--cidfile=}
 
 env DOCKER_HOST="$docker_host" executor --cidfile=$2 "$3"
