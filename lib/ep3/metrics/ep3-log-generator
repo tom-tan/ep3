@@ -26,8 +26,8 @@ def jobinfo(start, end_, dir)
                   {
                     hostname: nil,
                     ncpu_cores: props['ncores'],
-                    total_memory: props['memory']*(1024**3),
-                    disk_size: props['storage']*(1024**2),
+                    total_memory: props['memory'],
+                    disk_size: nil,
                     ec2_ami_id: nil,
                     ec2_instance_type: props['flavor'],
                     ec2_region: props['region'],
