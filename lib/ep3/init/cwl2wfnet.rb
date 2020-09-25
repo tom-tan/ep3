@@ -15,7 +15,7 @@ UnsupportedRequirements = [
   'ScatterFeatureRequirement', 'StepInputExpressionRequirement',
 ]
 
-def cwl2wfnet(cfile, dst, extra_path)
+def cwl2wfnet(cfile, dst, extra_path, extra_env)
   if cfile.match(/^(.+)(#.+)/)
     basefile = $1
     target = $2
@@ -30,7 +30,7 @@ def cwl2wfnet(cfile, dst, extra_path)
                File.expand_path(basefile)
              end
   prepare(basefile, target, dst)
-  convert(dst, extra_path)
+  convert(dst, extra_path, extra_env)
 end
 
 def prepare(basefile, cfile, dst, exts = {}, dir = [])
@@ -146,31 +146,31 @@ def replace_extensions(cwl, exts, basedir)
   CommonWorkflowLanguage.load(hash, basedir, {}, hash.fetch('$namespaces', nil))
 end
 
-def convert(dst, extra_path, ids = [])
+def convert(dst, extra_path, extra_env, ids = [])
   cwl = CommonWorkflowLanguage.load_file(File.join(dst, 'cwl', 'job.cwl'), false)
   case walk(cwl, '.class')
   when 'CommandLineTool', 'ExpressionTool'
     [
       {
         destination: File.join(*dst),
-        net: cmdnet(cwl, extra_path, ids),
+        net: cmdnet(cwl, extra_path, extra_env, ids),
       }
     ]
   when 'Workflow'
     net = {
       destination: File.join(*dst),
-      net: wfnet(cwl, extra_path, ids),
+      net: wfnet(cwl, extra_path, extra_env, ids),
     }
     nets = cwl.steps.map{ |s|
-      convert(File.join(dst, 'steps', s.id), extra_path, ids+['steps', s.id])
+      convert(File.join(dst, 'steps', s.id), extra_path, extra_env, ids+['steps', s.id])
     }.flatten
     [net, *nets]
   end
 end
 
-def cmdnet(cwl, extra_path, ids)
+def cmdnet(cwl, extra_path, extra_env, ids)
   control = File.join('.', *ids.map{|_| '..'}, 'ep3', 'control')
-  net = PetriNet.new(['ep3', 'system', 'job', *ids, 'main'].join('.'), extra_path)
+  net = PetriNet.new(['ep3', 'system', 'job', *ids, 'main'].join('.'), extra_path, extra_env)
 
   net << Transition.new(in_: [Place.new(control, 'stop')], out: [],
                         command: 'kill -s USR1 $PID', name: 'quit')
@@ -355,9 +355,9 @@ def default_inputs_for_steps(cwl)
   }
 end
 
-def wfnet(cwl, extra_path, ids)
+def wfnet(cwl, extra_path, extra_env, ids)
   control = File.join('.', *ids.map{|_| '..'}, 'ep3', 'control')
-  net = PetriNet.new(['ep3', 'system', 'job', *ids, 'main'].join('.'), extra_path)
+  net = PetriNet.new(['ep3', 'system', 'job', *ids, 'main'].join('.'), extra_path, extra_env)
 
   net << Transition.new(in_: [Place.new(control, 'stop')], out: [], command: 'kill -s USR1 $PID')
 

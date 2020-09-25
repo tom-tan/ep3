@@ -50,12 +50,17 @@ def ep3_init(args)
   
   extra_path = opts.fetch('extra-path', 
                           [
-                            File.join('$EP3_LIBPATH', 'executor'),
+                            File.join('$EP3_LIBPATH', 'reconf-executor'),
                             File.join('$EP3_LIBPATH', 'metrics'),
                           ].join(':'))
+  extra_env = opts.fetch('extra-env',
+  {
+    CONFIG: File.join('$EP3_LIBPATH', 'conf.json'),
+    REQUEST_FILE: File.join('$EP3_LIBPATH', 'request.json'),
+  })
 
   begin
-    nets = cwl2wfnet(cwl, dst, extra_path)
+    nets = cwl2wfnet(cwl, dst, extra_path, extra_env)
     nets.each{ |n|
       open(File.join(n[:destination], 'job.sh'), 'w') { |f|
         f.puts wfnet2entr(n[:net])

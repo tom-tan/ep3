@@ -78,11 +78,12 @@ class Transition
 end
 
 class PetriNet
-  attr_reader :transitions, :possible_places, :tag, :extra_path
+  attr_reader :transitions, :possible_places, :tag, :extra_path, :extra_env
 
-  def initialize(tag, extra_path)
+  def initialize(tag, extra_path, extra_env)
     @tag = tag
     @extra_path = extra_path
+    @extra_env = extra_env
     @transitions = Set.new
     @possible_places = Hash.new
   end

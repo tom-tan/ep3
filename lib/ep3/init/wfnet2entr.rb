@@ -90,6 +90,7 @@ EP3_TAG=#{net.tag}
 PATH=#{net.extra_path}:$EP3_LIBPATH/runtime:$PATH
 SHELL=/bin/sh
 PID=$$
+#{net.extra_env.map{|k, v| "#{k}=#{v}" }.join("\n")}
 
 for f in #{watched.join(' ')}
 do
