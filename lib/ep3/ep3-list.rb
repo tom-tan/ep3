@@ -34,7 +34,7 @@ def ep3_list(args)
           nil
         end
 
-  output = open(File.join(dir, 'status', 'cwl.output.json')) { |f|
+  output = open(Dir.glob("#{File.join(dir, 'tmpdir', 'cwl.output.json-*')}").first) { |f|
     JSON.load(f)
   }.transform_values{ |v|
     InputParameter.parse_object(nil, v, File.join(dir, 'outputs'), {}, {})
@@ -44,6 +44,7 @@ def ep3_list(args)
   }
   puts JSON.dump(stagein(to_be_skipped, {}, output, dst,
                          opts.include?('copy')))
+  0
 end
 
 if $0 == __FILE__

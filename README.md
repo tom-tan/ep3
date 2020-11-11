@@ -23,14 +23,14 @@ Notes:
   - It affects the result of the tests of `Workflow` (`workflow` tag), `InlineJavascriptRequirement` (`inline_javascript` tag), `MultipleInputFeatureRequirement` (`multiple_input` tag) and `SubworkflowFeatureRequirement` (`subworkflow` tag).
 
 ## Requirements
-- [entr](http://entrproject.org)
+- [medal](https://github.com/tom-tan/medal)
 - [Ruby](https://www.ruby-lang.org) 2.5.1 or later
 - [Fluentd](https://www.fluentd.org) 1.3.3 or later
 - [jq](https://stedolan.github.io/jq/)
 - [nodejs](https://nodejs.org) for `InlineJavascriptRequirement`
 
 ## How to install
-- Install `entr`, `jq`, `ruby`, `nodejs`, and `fluentd`
+- Install `medal`, `jq`, `ruby`, `nodejs`, and `fluentd`
 - Execute the following commands and add `/path/to/ep3` to `$PATH`.
 ```console
 $ git clone --recursive https://github.com/tom-tan/ep3.git
@@ -77,12 +77,8 @@ The `ep3-runner` command consists of the following internal commands:
   - Generates shell scripts that calls `entr`s for the given CWL
 - `ep3 run`
   - Executes generated scripts and start processing a workflow
-- `ep3 status`
-  - Shows the current status of execution
 - `ep3 list`
   - Shows the output object for execution result
-- `ep3 terminate`
-  - Terminates scripts and other processes
 - `ep3 resume` (Unimplemented)
 - `ep3 stop` (Unimplemented)
 

@@ -6,6 +6,7 @@ require 'fileutils'
 require_relative 'init/cwl2wfnet'
 require_relative 'init/wfnet2entr'
 require_relative 'runtime/inspector'
+require_relative 'init/wfnet2medal'
 
 def ep3_init(args)
   parser = OptionParser.new
@@ -36,22 +37,25 @@ def ep3_init(args)
   raise "No such file: #{file}" unless File.exist? file
 
   force = opts.fetch('force', false)
-  dst = if opts.include? 'target-dir'
-          dir = opts['target-dir']
-          if Dir.exist?(dir) and not force
-            raise "#{dir} already exist"
-          end
-          FileUtils.mkdir_p dir
-          File.expand_path(dir)
-        else
-          Dir.mktmpdir
-        end
+  target_dir = if opts.include? 'target-dir'
+                 dir = opts['target-dir']
+                 if Dir.exist?(dir) and not force
+                   raise "#{dir} already exist"
+                 end
+                 FileUtils.mkdir_p dir
+                 File.expand_path(dir)
+               else
+                 Dir.mktmpdir
+               end
+  dst = File.join(target_dir, 'workdir')
+  FileUtils.mkdir_p(dst) unless Dir.exist?(dst)
 
   begin
     nets = cwl2wfnet(cwl, dst)
     nets.each{ |n|
-      open(File.join(n[:destination], 'job.sh'), 'w') { |f|
-        f.puts wfnet2entr(n[:net])
+      open(File.join(n[:destination], 'job.yml'), 'w') { |f|
+        #f.puts wfnet2entr(n[:net])
+        f.puts wfnet2medal(n[:net])
       }
       if opts.include? 'print-dot'
         open(File.join(n[:destination], 'net.dot'), 'w') { |f|
@@ -64,9 +68,6 @@ def ep3_init(args)
     fluentd_dir = File.join(dst, 'fluentd')
     FileUtils.mkdir fluentd_dir
     FileUtils.cp(File.join(template_dir, 'fluentd.conf'), fluentd_dir)
-
-    FileUtils.mkdir File.join(dst, 'ep3')
-    FileUtils.cp(File.join(template_dir, 'run.sh'), dst)
   rescue UnsupportedError => e
     FileUtils.remove_entry(dst) if Dir.exist? dst
     warn e
@@ -75,7 +76,8 @@ def ep3_init(args)
     FileUtils.remove_entry(dst) if Dir.exist? dst
     raise e
   end
-  puts dst
+  puts target_dir
+  0
 end
 
 if $0 == __FILE__

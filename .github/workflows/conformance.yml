@@ -27,16 +27,15 @@ jobs:
     - name: Install Fluentd
       run: |
         gem install -N fluentd
-    - name: Install entr
-      env:
-        ENTR_VER: 4.4
+    - uses: dlang-community/setup-dlang@v1
+      with:
+        compiler: ldc-latest
+    - name: Install medal
       run: |
-        curl -O http://eradman.com/entrproject/code/entr-${ENTR_VER}.tar.gz
-        tar xf entr-${ENTR_VER}.tar.gz
-        cd entr-${ENTR_VER}
-        ./configure
-        make test
-        sudo make install
+        git clone https://github.com/tom-tan/medal.git
+        cd medal
+        dub build -b release
+        cp bin/medal /usr/bin
         cd $GITHUB_WORKSPACE
     - uses: actions/setup-node@v1.1.0
       with:

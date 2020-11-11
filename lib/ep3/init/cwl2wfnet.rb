@@ -64,12 +64,9 @@ def prepare(basefile, cfile, dst, exts = {}, dir = [])
     Dir.mkdir dst
   end
 
-  Dir.mkdir File.join(dst, 'outputs')
-  Dir.mkdir File.join(dst, 'status')
-  Dir.mkdir File.join(dst, 'cwl')
   FileUtils.mkdir_p File.join(dst, '.ep3', 'system')
   FileUtils.mkdir_p File.join(dst, '.ep3', 'info')
-  open(File.join(dst, 'cwl', 'job.cwl'), 'w') { |f|
+  open(File.join(dst, 'job.cwl'), 'w') { |f|
     f.puts YAML.dump cwl.to_h
   }
 
@@ -92,7 +89,7 @@ def prepare(basefile, cfile, dst, exts = {}, dir = [])
                                  }, exts)
       prepare(basefile, s.run, File.join(dst, 'steps', s.id), stepExt, stepdir)
       if defaults.include? s.id
-        open(File.join(dst, 'steps', s.id, 'status', 'inputs.json'), 'w') { |f|
+        open(File.join(dst, 'steps', s.id, 'status', 'input.json'), 'w') { |f|
           f.puts defaults[s.id]
         }
       end
@@ -147,7 +144,7 @@ def replace_extensions(cwl, exts, basedir)
 end
 
 def convert(dst, ids = [])
-  cwl = CommonWorkflowLanguage.load_file(File.join(dst, 'cwl', 'job.cwl'), false)
+  cwl = CommonWorkflowLanguage.load_file(File.join(dst, 'job.cwl'), false)
   case walk(cwl, '.class')
   when 'CommandLineTool', 'ExpressionTool'
     [
@@ -169,67 +166,33 @@ def convert(dst, ids = [])
 end
 
 def cmdnet(cwl, ids)
-  control = File.join('.', *ids.map{|_| '..'}, 'ep3', 'control')
-  net = PetriNet.new(['ep3', 'system', 'job', *ids, 'main'].join('.'))
+  any = '_'
+  net = PetriNet.new('command-line-tool', 'ep3.system.main')
 
-  net << Transition.new(in_: [Place.new(control, 'stop')], out: [],
-                        command: 'kill -s USR1 $PID', name: 'quit')
-
-  net << Transition.new(in_: [Place.new('inputs.json', '*')], out: [],
-                        name: 'start-execution')
-
-  net << Transition.new(in_: [Place.new('inputs.json', '*')], out: [Place.new('Allocation', 'wip')], name: 'to-allocation')
-
-  net << Transition.new(in_: [Place.new('Allocation', 'wip'), Place.new('reconf.command', '*')],
-                        out: [Place.new('reconf.err', 'STDERR'), Place.new('Allocation.return', 'RETURN')],
-                        command: %Q!eval '\\$(cat $STATE_DIR/reconf.command) -o $STATE_DIR/../reconf'!,
-                        name: 'allocate')
-  net << Transition.new(in_: [Place.new('Allocation', 'wip'), Place.new('reconf.command')], out: [Place.new('Allocation', 'success')], name: 'allocate-fallback')
-  net << Transition.new(in_: [Place.new('Allocation', 'success')], out: [Place.new('StageIn', 'wip')], name: 'to-staging-in')
-  net << Transition.new(in_: [Place.new('Allocation', 'permanentFailure')], out: [Place.new('ExecutionState', 'permanentFailure')], name: 'permanent-fail-allocation')
-
-  net << Transition.new(in_: [Place.new('Allocation.return', '0')], out: [Place.new('Allocation', 'success')])
-  net << Transition.new(in_: [Place.new('Allocation.return', '*')], out: [Place.new('Allocation', 'permanentFailure')])
-
-  net << Transition.new(in_: [Place.new('StageIn', 'wip')],
-                        out: [Place.new('StageIn.return', 'RETURN'), Place.new('StageIn.err', 'STDERR'),
-                              Place.new('cwl.inputs.json', 'STDOUT')],
-                        command: %Q!stage-in.rb --outdir=$STATE_DIR/../outputs $CWL $STATE_DIR/inputs.json!,
+  net << Transition.new(in_: [Place.new('entrypoint', any)],
+                        out: [Place.new('input.json', "~(entrypoint)"),
+                              Place.new('StageIn', 'not-started'), Place.new('CommandGeneration', 'not-started'),
+                              Place.new('Execution', 'not-started'), Place.new('StageOut', 'not-started')],
+                        name: 'prepare')
+  net << Transition.new(in_: [Place.new('StageIn', 'not-started'), Place.new('input.json', any)],
+                        out: [Place.new('StageIn', 'success'),
+                              Place.new('cwl.input.json', 'STDOUT'), Place.new('StageIn.err', 'STDERR')],
+                        command: %q!mkdir -p $MEDAL_TMPDIR/outputs; stage-in.rb --outdir=$MEDAL_TMPDIR/outputs job.cwl ~(input.json)!,
                         name: 'stage-in')
-  net << Transition.new(in_: [Place.new('StageIn', 'success')], out: [Place.new('CommandGeneration', 'wip')],
-                        name: 'to-command-generation')
-  net << Transition.new(in_: [Place.new('StageIn', 'permanentFailure')],
-                        out: [Place.new('ExecutionState', 'permanentFailure'), Place.new('Deallocation', 'wip')],
-                        name: 'permanent-fail-staging-in')
 
-  net << Transition.new(in_: [Place.new('StageIn.return', '0')], out: [Place.new('StageIn', 'success')])
-  net << Transition.new(in_: [Place.new('StageIn.return', '*')], out: [Place.new('StageIn', 'permanentFailure')])
-
-  net << Transition.new(in_: [Place.new('CommandGeneration', 'wip'), Place.new('cwl.inputs.json', '*')],
-                        out: [Place.new('CommandGeneration.return', 'RETURN'), Place.new('CommandGeneration.command', 'STDOUT'),
+  net << Transition.new(in_: [Place.new('CommandGeneration', 'not-started'), Place.new('StageIn', 'success'),
+                              Place.new('cwl.input.json', any)],
+                        out: [Place.new('CommandGeneration', 'success'), Place.new('cwl.input.json', '~(cwl.input.json)'),
+                              Place.new('CommandGeneration.command', 'STDOUT'),
                               Place.new('CommandGeneration.err', 'STDERR')],
-                        command: %Q!inspector.rb $CWL commandline -i $STATE_DIR/cwl.inputs.json --outdir=$STATE_DIR/../outputs!,
+                        command: %Q!inspector.rb job.cwl commandline -i ~(cwl.input.json) --outdir=$MEDAL_TMPDIR/outputs!,
                         name: 'generate-command')
-  net << Transition.new(in_: [Place.new('CommandGeneration', 'success')], out: [Place.new('Execution', 'wip')],
-                        name: 'to-execution')
-  net << Transition.new(in_: [Place.new('CommandGeneration', 'permanentFailure')],
-                        out: [Place.new('ExecutionState', 'permanentFailure'), Place.new('Deallocation', 'wip')],
-                        name: 'permanent-fail-command-generation')
-  net << Transition.new(in_: [Place.new('CommandGeneration.return', '0')], out: [Place.new('CommandGeneration', 'success')])
-  net << Transition.new(in_: [Place.new('CommandGeneration.return', '*')], out: [Place.new('CommandGeneration', 'permanentFailure')])
 
-  net << Transition.new(in_: [Place.new('Execution', 'wip'), Place.new('CommandGeneration.command', '*')],
-                        out: [Place.new('Execution.return', 'RETURN'), Place.new('Execution.stdout', 'STDOUT'), Place.new('Execution.stderr', 'STDERR')],
-                        command: %Q!executor $STATE_DIR/CommandGeneration.command!,
+  net << Transition.new(in_: [Place.new('Execution', 'not-started'), Place.new('CommandGeneration', 'success'),
+                              Place.new('CommandGeneration.command', any)],
+                        out: [Place.new('Execution.return', 'RETURN'), Place.new('Execution.out', 'STDOUT'), Place.new('Execution.err', 'STDERR')],
+                        command: %Q!executor ~(CommandGeneration.command)!,
                         name: 'execute')
-  net << Transition.new(in_: [Place.new('Execution', 'success')], out: [Place.new('StageOut', 'wip')],
-                        name: 'to-staging-out')
-  net << Transition.new(in_: [Place.new('Execution', 'permanentFailure')],
-                        out: [Place.new('ExecutionState', 'permanentFailure'), Place.new('Deallocation', 'wip')],
-                        name: 'permanent-fail-execution')
-  net << Transition.new(in_: [Place.new('Execution', 'temporaryFailure')],
-                        out: [Place.new('ExecutionState', 'permanentFailure'), Place.new('Deallocation', 'wip')],
-                        name: 'temporary-fail-execution')
 
   successCodes = case cwl.class_
                  when 'CommandLineTool'
@@ -239,7 +202,8 @@ def cmdnet(cwl, ids)
                  end
   successCodes.each{ |c|
     net << Transition.new(in_: [Place.new('Execution.return', c.to_s)],
-                          out: [Place.new('Execution', 'success')])
+                          out: [Place.new('Execution', 'success')],
+                          name: 'verify-success')
   }
 
   temporaryFailCodes = case cwl.class_
@@ -249,42 +213,39 @@ def cmdnet(cwl, ids)
                          []
                        end
   temporaryFailCodes.each{ |c|
-    net << Transition.new(in_: [Place.new('Execution.return', c.to_s)], out: [Place.new('Execution', 'temporaryFailure')])
+    net << Transition.new(in_: [Place.new('Execution.return', c.to_s)],
+                          out: [Place.new('Execution', 'temporaryFailure')],
+                          name: 'verify-temporaryFailure')
   }
+  unless temporaryFailCodes.empty?
+    net << Transition.new(in_: [Place.new('Execution', 'temporaryFailure')], out: [],
+                          command: '"false"',
+                          name: 'fail')
+  end
 
   permanentFailCodes = case cwl.class_
                        when 'CommandLineTool'
                          codes = cwl.permanentFailCodes
-                         codes.empty? ? ['*'] : codes
+                         codes.empty? ? [any] : codes
                        when 'ExpressionTool'
-                         ['*']
+                         [any]
                        end
   permanentFailCodes.each{ |c|
-    net << Transition.new(in_: [Place.new('Execution.return', c.to_s)], out: [Place.new('Execution', 'permanentFailure')])
+    net << Transition.new(in_: [Place.new('Execution.return', c.to_s)], out: [Place.new('Execution', 'permanentFailure')],
+                          name: 'verify-permanentFailure')
   }
+  unless permanentFailCodes.empty?
+    net << Transition.new(in_: [Place.new('Execution', 'permanentFailure')], out: [],
+                          command: '"false"',
+                          name: 'fail')
+  end
 
-  net << Transition.new(in_: [Place.new('StageOut', 'wip'), Place.new('cwl.inputs.json', '*')],
-                        out: [Place.new('cwl.output.json', 'STDOUT'), Place.new('StageOut.err', 'STDERR'), Place.new('StageOut.return', 'RETURN')],
-                        command: %Q!inspector.rb $CWL list -i $STATE_DIR/cwl.inputs.json --json --outdir=$STATE_DIR/../outputs!,
+  net << Transition.new(in_: [Place.new('StageOut', 'not-started'), Place.new('Execution', 'success'),
+                              Place.new('cwl.input.json', any)],
+                        out: [Place.new('StageOut', 'success'),
+                              Place.new('cwl.output.json', 'STDOUT'), Place.new('StageOut.err', 'STDERR')],
+                        command: %Q!inspector.rb job.cwl list -i ~(cwl.input.json) --json --outdir=$MEDAL_TMPDIR/outputs!,
                         name: 'stage-out')
-  net << Transition.new(in_: [Place.new('StageOut', 'success')],
-                        out: [Place.new('ExecutionState', 'success'), Place.new('Deallocation', 'wip')])
-  net << Transition.new(in_: [Place.new('StageOut', 'permanentFailure')],
-                        out: [Place.new('ExecutionState', 'permanentFailure'), Place.new('Deallocation', 'wip')],
-                        name: 'permanent-fail-staging-out')
-  net << Transition.new(in_: [Place.new('StageOut', 'temporaryFailure')], out: [Place.new('Deallocation', 'wip')],
-                        name: 'temporary-fail-staging-out')
-  net << Transition.new(in_: [Place.new('StageOut.return', '0')], out: [Place.new('StageOut', 'success')])
-  net << Transition.new(in_: [Place.new('StageOut.return', '*')], out: [Place.new('StageOut', 'permanentFailure')])
-
-  net << Transition.new(in_: [Place.new('Deallocation', 'wip'), Place.new('deallocate.command')], out: [Place.new('Deallocation', 'success')],
-                        name: 'deallocate-fallback')
-  net << Transition.new(in_: [Place.new('Deallocation.return', '0')], out: [Place.new('Deallocation', 'success')])
-  net << Transition.new(in_: [Place.new('Deallocation.return', '*')], out: [Place.new('Deallocation', 'permanentFailure')])
-
-  net << Transition.new(in_: [Place.new('ExecutionState', '*')], out: [],
-                        name: 'finish-execution')
-
   net
 end
 
@@ -346,13 +307,8 @@ def default_inputs_for_steps(cwl)
 end
 
 def wfnet(cwl, ids)
-  control = File.join('.', *ids.map{|_| '..'}, 'ep3', 'control')
-  net = PetriNet.new(['ep3', 'system', 'job', *ids, 'main'].join('.'))
-
-  net << Transition.new(in_: [Place.new(control, 'stop')], out: [], command: 'kill -s USR1 $PID')
-
-  net << Transition.new(in_: [Place.new('inputs.json', '*')], out: [],
-                        name: 'start-execution')
+  any = '_'
+  net = PetriNet.new('workflow', 'ep3.system.main')
 
   cwl.steps.each{ |s|
     propagated = (cwl.requirements.map{ |r| r.class_ } +
@@ -365,9 +321,10 @@ def wfnet(cwl, ids)
             else
               ".requirements.#{r}"
             end
-      net << Transition.new(in_: [Place.new('inputs.json', '*')],
-                            out: [Place.new("steps/#{s.id}/status/requirement-#{r}", 'STDOUT')],
-                            command: "inspector.rb --evaluate-expressions $CWL #{req} -i $STATE_DIR/inputs.json",
+      raise "Not implemented!"
+      net << Transition.new(in_: [Place.new('input.json', any)],
+                            out: [Place.new("steps/#{s.id}/status/requirement-#{r}", "steps/#{s.id}/status/requirement-#{r}")],
+                            command: "inspector.rb --evaluate-expressions job.cwl #{req} -i ~(input.json) > steps/#{s.id}/status/requirement-#{r}",
                             name: "propagate-req-#{r}")
     }
 
@@ -375,23 +332,25 @@ def wfnet(cwl, ids)
       not propagated.include?(r.class_) and
         RequirementsForCommandLineTool.include? r.class_
     }.each{ |r|
-      net << Transition.new(in_: [Place.new('inputs.json', '*')],
-                            out: [Place.new("steps/#{s.id}/status/hint-#{r.class_}", 'STDOUT')],
-                            command: "inspector.rb --evaluate-expressions $CWL .hints.#{r.class_} -i $STATE_DIR/inputs.json",
+      raise "Not implemented!"
+      net << Transition.new(in_: [Place.new('input.json', any)],
+                            out: [Place.new("steps/#{s.id}/status/hint-#{r.class_}", "steps/#{s.id}/status/hint-#{r.class_}")],
+                            command: "inspector.rb --evaluate-expressions job.cwl .hints.#{r.class_} -i ~(input.json) > steps/#{s.id}/status/hint-#{r.class_}",
                             name: "propagate-hint-#{r.class_}")
     }
 
     if s.in.empty?
-      net << Transition.new(in_: [Place.new('inputs.json', '*')],
-                            out: [Place.new("steps/#{s.id}/status/inputs.json", '{}')],
+      raise "Not implemented!"
+      net << Transition.new(in_: [Place.new('input.json', any)],
+                            out: [Place.new("steps/#{s.id}/status/input.json", '{}')],
                             name: "start-#{s.id}")
     end
   }
 
   cwl.inputs.each{ |inp|
-    net << Transition.new(in_: [Place.new('inputs.json', '*')],
+    net << Transition.new(in_: [Place.new('input.json', any)],
                           out: [Place.new(inp.id, 'STDOUT')],
-                          command: "jq -c '.#{inp.id}' $STATE_DIR/inputs.json",
+                          command: "jq -c '.#{inp.id}' ~(input.json)",
                           name: "parse-#{inp.id}")
   }
 
@@ -445,23 +404,23 @@ def wfnet(cwl, ids)
                 src.map{ |s_| s_.sub(/\//, '_') }
               end
       i = i+src.length unless src.empty?
-      [%Q!\\"#{param}\\": #{val.gsub(/"/, '\\"').gsub(/\$/, '\\$')}!, label]
+      [%Q!"#{param}": #{val}!, label]
     }.transpose
 
     unless jqparams.empty?
-      inp = ps.flatten.map{ |p| Place.new(p, '*') }
+      inp = ps.flatten.map{ |p| Place.new(p, any) }
       if inp.empty?
-        inp = [Place.new('inputs.json', '*')]
+        inp = [Place.new('input.json', any)]
       end
       tr_name = "start-#{step}"
       if ps.empty?
         net << Transition.new(in_: inp,
-                              out: [Place.new("steps/#{step}/status/inputs.json", "'{ #{jqparams[0].join(', ') } }'")],
+                              out: [Place.new("steps/#{step}/status/input.json", "'{ #{jqparams[0].join(', ') } }'")],
                               name: tr_name)
       else
         net << Transition.new(in_: inp,
-                              out: [Place.new("steps/#{step}/status/inputs.json", 'STDOUT')],
-                              command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].flatten.compact.map{ |p| File.join('$STATE_DIR', p) }.join(' ') }!,
+                              out: [Place.new("steps/#{step}/status/input.json", 'STDOUT')],
+                              command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].flatten.compact.join(' ') }!,
                               name: tr_name)
       end
     end
@@ -472,9 +431,10 @@ def wfnet(cwl, ids)
     s.out.each{ |o|
       net << Transition.new(in_: [Place.new("steps/#{step}/status/ExecutionState", 'success')],
                             out: [Place.new("#{step}_#{o.id}", 'STDOUT')],
-                            command: %Q!jq -c '.#{o.id}' steps/#{step}/status/cwl.output.json!)
+                            command: %Q!jq -c '.#{o.id}' steps/#{step}/status/cwl.output.json!,
+                            name: "port-#{step}-#{o.id}")
     }
-    net << Transition.new(in_: [Place.new("steps/#{step}/status/ExecutionState", '*')],
+    net << Transition.new(in_: [Place.new("steps/#{step}/status/ExecutionState", any)],
                           out: [Place.new("#{step}_ExecutionState", 'STDOUT'), Place.new("ExecutionState", 'STDOUT')],
                           command: "cat steps/#{step}/status/ExecutionState",
                           name: "notify-#{step}-result")
@@ -489,9 +449,10 @@ def wfnet(cwl, ids)
                   else
                     out.outputSource.first
                   end
-    net << Transition.new(in_: [Place.new(sourceLabel, '*')],
+    net << Transition.new(in_: [Place.new(sourceLabel, any)],
                           out: [Place.new(out.id, 'STDOUT')],
-                          command: "jq -c . $STATE_DIR/#{sourceLabel}")
+                          command: "jq -c . #{sourceLabel}",
+                          name: "port-#{sourceLabel}-#{out.id}")
   }
 
   resultPlaces = cwl.steps.map{ |s| Place.new("#{s.id}_ExecutionState", 'success') }
@@ -504,15 +465,15 @@ def wfnet(cwl, ids)
   else
     outParams = cwl.outputs.map{ |o| o.id }
     jqparams = outParams.to_enum.with_index.map{ |o, idx|
-      [%Q!\\"#{o}\\": .[#{idx}]!, o]
+      [%Q!"#{o}": .[#{idx}]!, o]
     }.transpose
 
-    net << Transition.new(in_: outParams.map{ |o| Place.new(o, '*') }+resultPlaces,
+    net << Transition.new(in_: outParams.map{ |o| Place.new(o, any) }+resultPlaces,
                           out: [Place.new('cwl.output.json', 'STDOUT'), Place.new('ExecutionState', 'success')],
-                          command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].map{ |j| File.join('$STATE_DIR', j) }.join(' ')}!,
+                          command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].join(' ')}!,
                           name: 'generate-output-object')
   end
-  net << Transition.new(in_: [Place.new('ExecutionState', '*')], out: [],
+  net << Transition.new(in_: [Place.new('ExecutionState', any)], out: [],
                         name: 'finish-execution')
 
   net

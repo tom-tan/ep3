@@ -7,16 +7,16 @@ def run_fluentd(target_dir, template_dir, quiet, debug)
   system_conf = debug ? 'stdout-logger.conf' : 'null-logger.conf'
 
   FileUtils.cp(File.join(template_dir, system_conf),
-               File.join(target_dir, 'fluentd', 'system-logger.conf'))
+               File.join(target_dir, 'workdir', 'fluentd', 'system-logger.conf'))
 
   info_conf = quiet ? 'null-logger.conf' : 'stdout-logger.conf'
 
   FileUtils.cp(File.join(template_dir, info_conf),
-               File.join(target_dir, 'fluentd', 'info-logger.conf'))
+               File.join(target_dir, 'workdir', 'fluentd', 'info-logger.conf'))
 
   logger_path = File.join(ENV['EP3_LIBPATH'], 'run')
   spawn({ 'PATH' => "#{logger_path}:#{ENV['PATH']}"},
-        'fluentd -qqc fluentd/fluentd.conf',
+        'fluentd -qqc workdir/fluentd/fluentd.conf',
         :chdir => target_dir, :out => :err)
 end
 
@@ -29,7 +29,7 @@ def detailed_input(input, dir)
           YAML.load_file(input)
         end
   dirname = File.dirname input
-  cwlfile = File.join(dir, 'cwl', 'job.cwl')
+  cwlfile = File.join(dir, 'workdir', 'job.cwl')
   nss = YAML.load_file(cwlfile).fetch('$namespaces', {})
   Hash[walk(cwlfile, '.inputs', []).select{ |inp|
          obj.fetch(inp.id, nil) or not inp.default.instance_of?(InvalidValue)
@@ -86,15 +86,26 @@ def ep3_run(args)
                     opts.include?('quiet'), opts.include?('debug'))
   ep3_pid = nil
   begin
-    ep3_pid = spawn({ 'EP3_LIBPATH' => ENV['EP3_LIBPATH'] },
-                    "sh run.sh",
-                    :chdir => dir, :err => [File.join(dir, '.ep3','system', 'job.log'), 'w'])
-    sleep 2
-    open(File.join(dir, 'status', 'inputs.json'), 'w') { |f|
+    open(File.join(dir, 'workdir', 'input.json'), 'w') { |f|
       f.puts JSON.dump detailed_input(input, dir)
     }
-    Process.waitpid ep3_pid
+    open(File.join(dir, 'workdir', 'init.yml'), 'w') { |f|
+      f.puts <<EOS
+entrypoint: input.json
+EOS
+    }
+    medal = "#{ENV['EP3_LIBPATH']}/runtime/medal"
+    logfile = 'medal-log.json'
+    ep3_pid = spawn({ 'PATH' => "#{ENV['EP3_LIBPATH']}/runtime:#{ENV['PATH']}" },
+                    "#{medal} workdir/job.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --debug --log=#{logfile}",
+                    :chdir => dir)
+    _, status = Process.waitpid2 ep3_pid
     ep3_pid = nil
+    if status.exited?
+      0
+    else
+      1
+    end
   rescue Interrupt
     # nop
   ensure
