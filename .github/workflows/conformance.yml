@@ -35,7 +35,7 @@ jobs:
         git clone https://github.com/tom-tan/medal.git
         cd medal
         dub build -b release
-        cp bin/medal /usr/bin
+        sudo cp bin/medal /usr/bin
         cd $GITHUB_WORKSPACE
     - uses: actions/setup-node@v1.1.0
       with:
