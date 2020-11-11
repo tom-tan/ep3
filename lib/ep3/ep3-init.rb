@@ -68,8 +68,6 @@ def ep3_init(args)
     fluentd_dir = File.join(dst, 'fluentd')
     FileUtils.mkdir fluentd_dir
     FileUtils.cp(File.join(template_dir, 'fluentd.conf'), fluentd_dir)
-
-    FileUtils.cp(File.join(template_dir, 'run.sh'), dst)
   rescue UnsupportedError => e
     FileUtils.remove_entry(dst) if Dir.exist? dst
     warn e
