@@ -64,9 +64,6 @@ def prepare(basefile, cfile, dst, exts = {}, dir = [])
     Dir.mkdir dst
   end
 
-  #Dir.mkdir File.join(dst, 'outputs')
-  #Dir.mkdir File.join(dst, 'status')
-  #Dir.mkdir File.join(dst, 'cwl')
   FileUtils.mkdir_p File.join(dst, '.ep3', 'system')
   FileUtils.mkdir_p File.join(dst, '.ep3', 'info')
   open(File.join(dst, 'job.cwl'), 'w') { |f|
