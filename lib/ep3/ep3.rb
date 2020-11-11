@@ -12,11 +12,9 @@ Usage: ep3 [options] <command> [<args>]
 Commands:
         init          initialize a configuration for a given workflow
         run           run the workflow for a given input
-        status        show a status of the workflow
         list          show the output object for the given workflow
         stop          (stop running the workflow)
         resume        (not yet implemented)
-        terminate     stop the workflow and remove the configuration
 EOS
 
   parser.order!(ARGV)
@@ -26,12 +24,12 @@ EOS
   end
 
   cmd = ARGV.shift
-  case cmd
-  when 'init'      then ep3_init(ARGV)
-  when 'run'       then ep3_run(ARGV)
-  when 'list'      then ep3_list(ARGV)
-  when 'stop'      then ep3_stop(ARGV)
-  when 'resume'    then ep3_resume(ARGV)
-  else raise "No such subcommand: #{cmd}"
-  end
+  exit case cmd
+       when 'init'      then ep3_init(ARGV)
+       when 'run'       then ep3_run(ARGV)
+       when 'list'      then ep3_list(ARGV)
+       when 'stop'      then ep3_stop(ARGV)
+       when 'resume'    then ep3_resume(ARGV)
+       else raise "No such subcommand: #{cmd}"
+       end
 end

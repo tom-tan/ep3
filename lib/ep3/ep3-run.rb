@@ -99,8 +99,13 @@ EOS
     ep3_pid = spawn({ 'PATH' => "#{ENV['EP3_LIBPATH']}/runtime:#{ENV['PATH']}" },
                     "#{medal} workdir/job.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --debug --log=#{logfile}",
                     :chdir => dir)
-    Process.waitpid ep3_pid
+    _, status = Process.waitpid2 ep3_pid
     ep3_pid = nil
+    if status.exited?
+      0
+    else
+      1
+    end
   rescue Interrupt
     # nop
   ensure
