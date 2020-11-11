@@ -64,8 +64,6 @@ def prepare(basefile, cfile, dst, exts = {}, dir = [])
     Dir.mkdir dst
   end
 
-  FileUtils.mkdir_p File.join(dst, '.ep3', 'system')
-  FileUtils.mkdir_p File.join(dst, '.ep3', 'info')
   open(File.join(dst, 'job.cwl'), 'w') { |f|
     f.puts YAML.dump cwl.to_h
   }
