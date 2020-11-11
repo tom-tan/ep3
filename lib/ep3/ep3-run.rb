@@ -94,10 +94,9 @@ def ep3_run(args)
 entrypoint: input.json
 EOS
     }
-    medal = "#{ENV['EP3_LIBPATH']}/runtime/medal"
     logfile = 'medal-log.json'
     ep3_pid = spawn({ 'PATH' => "#{ENV['EP3_LIBPATH']}/runtime:#{ENV['PATH']}" },
-                    "#{medal} workdir/job.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --debug --log=#{logfile}",
+                    "medal workdir/job.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --debug --log=#{logfile}",
                     :chdir => dir)
     _, status = Process.waitpid2 ep3_pid
     ep3_pid = nil
