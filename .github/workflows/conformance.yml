@@ -21,9 +21,9 @@ jobs:
       with:
         fetch-depth: 1
         submodules: true
-    - uses: actions/setup-ruby@v1.0.0
+    - uses: ruby/setup-ruby@v1
       with:
-        version: '2.6.x'
+        ruby-version: 2.7
     - name: Install Fluentd
       run: |
         gem install -N fluentd
@@ -37,17 +37,16 @@ jobs:
         dub build -b release
         sudo cp bin/medal /usr/bin
         cd $GITHUB_WORKSPACE
-    - uses: actions/setup-node@v1.1.0
+    - uses: actions/setup-node@v2
       with:
         node-version: '12.x'
     - name: Setup Python for testing
-      uses: actions/setup-python@v1.1.1
+      uses: actions/setup-python@v2
       with:
         python-version: '3.8.x'
     - name: Install cwltest
       run: pip install cwltest
     - name: Run example
-      if: false
       run: cwltest --tool $GITHUB_WORKSPACE/ep3-runner --test test.yml --timeout=30 --junit-xml=junit.xml
     - uses: actions/upload-artifact@v1
       if: failure()
@@ -85,5 +84,3 @@ jobs:
       with:
         name: junit.xml
         path: cwl/v1.0/junit.xml
-    - uses: mxschmitt/action-tmate@v1
-      if: false
