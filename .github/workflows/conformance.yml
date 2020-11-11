@@ -47,6 +47,7 @@ jobs:
     - name: Install cwltest
       run: pip install cwltest
     - name: Run example
+      if: false
       run: cwltest --tool $GITHUB_WORKSPACE/ep3-runner --test test.yml --timeout=30 --junit-xml=junit.xml
     - uses: actions/upload-artifact@v1
       if: failure()
