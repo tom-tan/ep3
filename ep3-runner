@@ -12,7 +12,7 @@ def run_cmd(cmd, debug)
   hash = {
     'success' => ret,
     'commmand' => cmd, 'return' => code,
-    'tag' => 'ep3.system', 'time' => Time.now.iso8601(9).sub(/\./, ','),
+    'tag' => 'ep3.system', 'time' => Time.now.iso8601(7),
   }
   if debug
     warn JSON.dump hash
@@ -22,7 +22,7 @@ rescue Interrupt
   hash = {
     'success' => false,
     'commmand' => cmd, 'interrupted' => true,
-    'tag' => 'ep3.system', 'time' => Time.now.iso8601(9).sub(/\./, ','),
+    'tag' => 'ep3.system', 'time' => Time.now.iso8601(7),
   }
   if debug
     puts JSON.dump hash
@@ -32,7 +32,7 @@ rescue => e
   hash = {
     'success' => false,
     'commmand' => cmd, 'message' => e.to_s,
-    'tag' => 'ep3.system', 'time' => Time.now.iso8601(9).sub(/\./, ','),
+    'tag' => 'ep3.system', 'time' => Time.now.iso8601(7),
   }
   if debug
     puts JSON.dump hash
