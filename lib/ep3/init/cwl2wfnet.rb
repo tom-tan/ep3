@@ -92,7 +92,7 @@ def prepare(basefile, cfile, dst, exts = {}, dir = [])
                                  }, exts)
       prepare(basefile, s.run, File.join(dst, 'steps', s.id), stepExt, stepdir)
       if defaults.include? s.id
-        open(File.join(dst, 'steps', s.id, 'status', 'inputs.json'), 'w') { |f|
+        open(File.join(dst, 'steps', s.id, 'status', 'input.json'), 'w') { |f|
           f.puts defaults[s.id]
         }
       end
@@ -170,12 +170,17 @@ end
 
 def cmdnet(cwl, ids)
   any = '_'
-  net = PetriNet.new(['ep3', 'system', 'job', *ids, 'main'].join('.'))
+  net = PetriNet.new('command-line-tool', 'ep3.system.main')
 
-  net << Transition.new(in_: [Place.new('StageIn', 'not-started'), Place.new('inputs.json', any)],
+  net << Transition.new(in_: [Place.new('entrypoint', any)],
+                        out: [Place.new('input.json', "~(entrypoint)"),
+                              Place.new('StageIn', 'not-started'), Place.new('CommandGeneration', 'not-started'),
+                              Place.new('Execution', 'not-started'), Place.new('StageOut', 'not-started')],
+                        name: 'prepare')
+  net << Transition.new(in_: [Place.new('StageIn', 'not-started'), Place.new('input.json', any)],
                         out: [Place.new('StageIn', 'success'),
                               Place.new('cwl.input.json', 'STDOUT'), Place.new('StageIn.err', 'STDERR')],
-                        command: %q!mkdir -p $MEDAL_TMPDIR/outputs; stage-in.rb --outdir=$MEDAL_TMPDIR/outputs job.cwl ~(inputs.json)!,
+                        command: %q!mkdir -p $MEDAL_TMPDIR/outputs; stage-in.rb --outdir=$MEDAL_TMPDIR/outputs job.cwl ~(input.json)!,
                         name: 'stage-in')
 
   net << Transition.new(in_: [Place.new('CommandGeneration', 'not-started'), Place.new('StageIn', 'success'),
@@ -306,8 +311,7 @@ end
 
 def wfnet(cwl, ids)
   any = '_'
-  control = File.join('.', *ids.map{|_| '..'}, 'ep3', 'control')
-  net = PetriNet.new(['ep3', 'system', 'job', *ids, 'main'].join('.'))
+  net = PetriNet.new('workflow', 'ep3.system.main')
 
   cwl.steps.each{ |s|
     propagated = (cwl.requirements.map{ |r| r.class_ } +
@@ -321,9 +325,9 @@ def wfnet(cwl, ids)
               ".requirements.#{r}"
             end
       raise "Not implemented!"
-      net << Transition.new(in_: [Place.new('inputs.json', any)],
+      net << Transition.new(in_: [Place.new('input.json', any)],
                             out: [Place.new("steps/#{s.id}/status/requirement-#{r}", "steps/#{s.id}/status/requirement-#{r}")],
-                            command: "inspector.rb --evaluate-expressions job.cwl #{req} -i ~(inputs.json) > steps/#{s.id}/status/requirement-#{r}",
+                            command: "inspector.rb --evaluate-expressions job.cwl #{req} -i ~(input.json) > steps/#{s.id}/status/requirement-#{r}",
                             name: "propagate-req-#{r}")
     }
 
@@ -332,24 +336,24 @@ def wfnet(cwl, ids)
         RequirementsForCommandLineTool.include? r.class_
     }.each{ |r|
       raise "Not implemented!"
-      net << Transition.new(in_: [Place.new('inputs.json', Any)],
+      net << Transition.new(in_: [Place.new('input.json', any)],
                             out: [Place.new("steps/#{s.id}/status/hint-#{r.class_}", "steps/#{s.id}/status/hint-#{r.class_}")],
-                            command: "inspector.rb --evaluate-expressions job.cwl .hints.#{r.class_} -i ~(inputs.json) > steps/#{s.id}/status/hint-#{r.class_}",
+                            command: "inspector.rb --evaluate-expressions job.cwl .hints.#{r.class_} -i ~(input.json) > steps/#{s.id}/status/hint-#{r.class_}",
                             name: "propagate-hint-#{r.class_}")
     }
 
     if s.in.empty?
       raise "Not implemented!"
-      net << Transition.new(in_: [Place.new('inputs.json', Any)],
-                            out: [Place.new("steps/#{s.id}/status/inputs.json", '{}')],
+      net << Transition.new(in_: [Place.new('input.json', any)],
+                            out: [Place.new("steps/#{s.id}/status/input.json", '{}')],
                             name: "start-#{s.id}")
     end
   }
 
   cwl.inputs.each{ |inp|
-    net << Transition.new(in_: [Place.new('inputs.json', any)],
+    net << Transition.new(in_: [Place.new('input.json', any)],
                           out: [Place.new(inp.id, 'STDOUT')],
-                          command: "jq -c '.#{inp.id}' ~(inputs.json)",
+                          command: "jq -c '.#{inp.id}' ~(input.json)",
                           name: "parse-#{inp.id}")
   }
 
@@ -409,16 +413,16 @@ def wfnet(cwl, ids)
     unless jqparams.empty?
       inp = ps.flatten.map{ |p| Place.new(p, any) }
       if inp.empty?
-        inp = [Place.new('inputs.json', any)]
+        inp = [Place.new('input.json', any)]
       end
       tr_name = "start-#{step}"
       if ps.empty?
         net << Transition.new(in_: inp,
-                              out: [Place.new("steps/#{step}/status/inputs.json", "'{ #{jqparams[0].join(', ') } }'")],
+                              out: [Place.new("steps/#{step}/status/input.json", "'{ #{jqparams[0].join(', ') } }'")],
                               name: tr_name)
       else
         net << Transition.new(in_: inp,
-                              out: [Place.new("steps/#{step}/status/inputs.json", 'STDOUT')],
+                              out: [Place.new("steps/#{step}/status/input.json", 'STDOUT')],
                               command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].flatten.compact.map{ |p| File.join('$STATE_DIR', p) }.join(' ') }!,
                               name: tr_name)
       end

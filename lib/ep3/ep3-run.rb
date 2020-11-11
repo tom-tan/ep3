@@ -86,16 +86,12 @@ def ep3_run(args)
   #                  opts.include?('quiet'), opts.include?('debug'))
   ep3_pid = nil
   begin
-    open(File.join(dir, 'workdir', 'inputs.json'), 'w') { |f|
+    open(File.join(dir, 'workdir', 'input.json'), 'w') { |f|
       f.puts JSON.dump detailed_input(input, dir)
     }
     open(File.join(dir, 'workdir', 'init.yml'), 'w') { |f|
       f.puts <<EOS
-inputs.json: inputs.json
-StageIn: not-started
-CommandGeneration: not-started
-Execution: not-started
-StageOut: not-started
+entrypoint: input.json
 EOS
     }
     medal = "#{ENV['EP3_LIBPATH']}/runtime/medal"

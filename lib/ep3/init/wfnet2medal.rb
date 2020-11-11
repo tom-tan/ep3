@@ -19,18 +19,13 @@ def wfnet2medal(net)
 EOT
     }
     <<EOS
+configurations:
+  tag: #{net.tag}
+name: #{net.name}
 type: network
 in:
-  - place: inputs.json
+  - place: entrypoint
     pattern: _
-  - place: StageIn
-    pattern: not-started
-  - place: CommandGeneration
-    pattern: not-started
-  - place: Execution
-    pattern: not-started
-  - place: StageOut
-    pattern: not-started
 out:
   - place: cwl.output.json
     pattern: _
