@@ -29,7 +29,7 @@ def detailed_input(input, dir)
           YAML.load_file(input)
         end
   dirname = File.dirname input
-  cwlfile = File.join(dir, 'cwl', 'job.cwl')
+  cwlfile = File.join(dir, 'workdir', 'job.cwl')
   nss = YAML.load_file(cwlfile).fetch('$namespaces', {})
   Hash[walk(cwlfile, '.inputs', []).select{ |inp|
          obj.fetch(inp.id, nil) or not inp.default.instance_of?(InvalidValue)
@@ -82,25 +82,35 @@ def ep3_run(args)
     raise "Directory not found: #{dir}"
   end
 
-  pid = run_fluentd(dir, template_dir,
-                    opts.include?('quiet'), opts.include?('debug'))
+  #pid = run_fluentd(dir, template_dir,
+  #                  opts.include?('quiet'), opts.include?('debug'))
   ep3_pid = nil
   begin
-    ep3_pid = spawn({ 'EP3_LIBPATH' => ENV['EP3_LIBPATH'] },
-                    "sh run.sh",
-                    :chdir => dir, :err => [File.join(dir, '.ep3','system', 'job.log'), 'w'])
-    sleep 2
-    open(File.join(dir, 'status', 'inputs.json'), 'w') { |f|
+    open(File.join(dir, 'workdir', 'inputs.json'), 'w') { |f|
       f.puts JSON.dump detailed_input(input, dir)
     }
+    open(File.join(dir, 'workdir', 'init.yml'), 'w') { |f|
+      f.puts <<EOS
+inputs.json: inputs.json
+StageIn: not-started
+CommandGeneration: not-started
+Execution: not-started
+StageOut: not-started
+EOS
+    }
+    medal = "#{ENV['EP3_LIBPATH']}/runtime/medal"
+    logfile = 'medal-log.json'
+    ep3_pid = spawn({ 'PATH' => "#{ENV['EP3_LIBPATH']}/runtime:#{ENV['PATH']}" },
+                    "#{medal} workdir/job.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --debug --log=#{logfile}",
+                    :chdir => dir)
     Process.waitpid ep3_pid
     ep3_pid = nil
   rescue Interrupt
     # nop
   ensure
-    unless pid.nil?
-      Process.kill :TERM, pid
-    end
+    #unless pid.nil?
+    #  Process.kill :TERM, pid
+    #end
     unless ep3_pid.nil?
       Process.kill :INT, ep3_pid
     end

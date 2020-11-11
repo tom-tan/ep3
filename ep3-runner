@@ -91,14 +91,14 @@ if $0 == __FILE__
     if ret_run.include? 'interrupted'
       exit 1
     elsif not ret_run['success']
-      run_cmd("#{basedir}/ep3 status --verbose #{target_arg}", debug)
+      #run_cmd("#{basedir}/ep3 status --verbose #{target_arg}", debug)
       exit ret_run.fetch('return', 1)
-    else
-      ret_file = File.join(tmpdir, 'status', 'ExecutionState')
-      unless File.exist?(ret_file) and
-            open(ret_file).read.chomp == 'success'
-        exit 1
-      end
+    #else
+    #  ret_file = File.join(tmpdir, 'status', 'ExecutionState')
+    #  unless File.exist?(ret_file) and
+    #        open(ret_file).read.chomp == 'success'
+    #    exit 1
+    #  end
     end
 
     run_cmd("#{basedir}/ep3 list #{target_arg} --copy #{dst_arg}", debug)
@@ -110,6 +110,9 @@ if $0 == __FILE__
                     else
                       ''
                     end
-    run_cmd("#{basedir}/ep3 terminate #{leave_dir_arg}#{target_arg}", debug)
+    # run_cmd("#{basedir}/ep3 terminate #{leave_dir_arg}#{target_arg}", debug)
+    unless opts.include? 'leave-tmpdir'
+      FileUtils.remove_entry tmpdir
+    end
   end
 end
