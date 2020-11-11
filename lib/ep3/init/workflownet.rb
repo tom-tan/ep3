@@ -77,6 +77,39 @@ class Transition
   end
 end
 
+class IPort
+  attr_reader :variable, :value, :port
+
+  def initialize(var, val, port)
+    @variable = var
+    @value = val
+    @port = port
+  end
+end
+
+class OPort
+  attr_reader :from, :to
+
+  def initialize(from, to)
+    @from = from
+    @to = to
+  end
+end
+
+class InvocationTransition
+  attr_reader :name, :in, :out, :tag, :tmpdir, :workdir, :use
+
+  def initialize(in_:, out:, tag:, tmpdir:, workdir:, use:, name: nil)
+    @name = name
+    @in = in_
+    @use = use
+    @out = out
+    @tag = tag
+    @tmpdir = tmpdir
+    @workdir = workdir
+  end
+end
+
 class PetriNet
   attr_reader :transitions, :possible_places, :tag, :name
 
@@ -89,17 +122,17 @@ class PetriNet
 
   def <<(tr)
     @transitions << tr
-    tr.in.select{ |p|
-      p.value != 'STDOUT' and
-        p.value != 'STDERR' and
-        p.value != 'RETURN'
-    }.each{ |p|
-      var = p.variable
-      unless @possible_places.include? var
-        @possible_places[var] = Set.new
-      end
-      @possible_places[var] << p
-    }
+    # tr.in.select{ |p|
+    #   p.value != 'STDOUT' and
+    #     p.value != 'STDERR' and
+    #     p.value != 'RETURN'
+    # }.each{ |p|
+    #   var = p.variable
+    #   unless @possible_places.include? var
+    #     @possible_places[var] = Set.new
+    #   end
+    #   @possible_places[var] << p
+    # }
   end
 
   def to_s

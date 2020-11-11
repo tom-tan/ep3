@@ -242,7 +242,7 @@ def cmdnet(cwl, ids)
 
   net << Transition.new(in_: [Place.new('StageOut', 'not-started'), Place.new('Execution', 'success'),
                               Place.new('cwl.input.json', any)],
-                        out: [Place.new('StageOut', 'success'),
+                        out: [Place.new('StageOut', 'success'), Place.new('ExecutionState', 'success'),
                               Place.new('cwl.output.json', 'STDOUT'), Place.new('StageOut.err', 'STDERR')],
                         command: %Q!inspector.rb job.cwl list -i ~(cwl.input.json) --json --outdir=$MEDAL_TMPDIR/outputs!,
                         name: 'stage-out')
@@ -321,10 +321,10 @@ def wfnet(cwl, ids)
             else
               ".requirements.#{r}"
             end
-      raise "Not implemented!"
-      net << Transition.new(in_: [Place.new('input.json', any)],
-                            out: [Place.new("steps/#{s.id}/status/requirement-#{r}", "steps/#{s.id}/status/requirement-#{r}")],
-                            command: "inspector.rb --evaluate-expressions job.cwl #{req} -i ~(input.json) > steps/#{s.id}/status/requirement-#{r}",
+      raise "Inheritance of requirements is not implemented!"
+      net << Transition.new(in_: [Place.new('entrypoint', any)],
+                            out: [Place.new("#{s.id}-requirement-#{r}", 'STDOUT')],
+                            command: "inspector.rb --evaluate-expressions job.cwl #{req} -i ~(entrypoint)",
                             name: "propagate-req-#{r}")
     }
 
@@ -332,25 +332,18 @@ def wfnet(cwl, ids)
       not propagated.include?(r.class_) and
         RequirementsForCommandLineTool.include? r.class_
     }.each{ |r|
-      raise "Not implemented!"
-      net << Transition.new(in_: [Place.new('input.json', any)],
-                            out: [Place.new("steps/#{s.id}/status/hint-#{r.class_}", "steps/#{s.id}/status/hint-#{r.class_}")],
-                            command: "inspector.rb --evaluate-expressions job.cwl .hints.#{r.class_} -i ~(input.json) > steps/#{s.id}/status/hint-#{r.class_}",
+      raise "Inheritance of hints is not implemented!"
+      net << Transition.new(in_: [Place.new('entrypoint', any)],
+                            out: [Place.new("#{s.id}-hint-#{r.class_}", 'STDOUT')],
+                            command: "inspector.rb --evaluate-expressions job.cwl .hints.#{r.class_} -i ~(entrypoint)",
                             name: "propagate-hint-#{r.class_}")
     }
-
-    if s.in.empty?
-      raise "Not implemented!"
-      net << Transition.new(in_: [Place.new('input.json', any)],
-                            out: [Place.new("steps/#{s.id}/status/input.json", '{}')],
-                            name: "start-#{s.id}")
-    end
   }
 
   cwl.inputs.each{ |inp|
-    net << Transition.new(in_: [Place.new('input.json', any)],
+    net << Transition.new(in_: [Place.new('entrypoint', any)],
                           out: [Place.new(inp.id, 'STDOUT')],
-                          command: "jq -c '.#{inp.id}' ~(input.json)",
+                          command: "jq -c '.#{inp.id}' ~(entrypoint)",
                           name: "parse-#{inp.id}")
   }
 
@@ -407,37 +400,44 @@ def wfnet(cwl, ids)
       [%Q!"#{param}": #{val}!, label]
     }.transpose
 
-    unless jqparams.empty?
+    if jqparams.empty?
+      net << Transition.new(in_: [Place.new('entrypoint', any)],
+                            out: [Place.new("#{step}-entrypoint", '$EP3_TEMPLATE_DIR/empty.json')],
+                            name: "prepare-#{step}")
+    else
       inp = ps.flatten.map{ |p| Place.new(p, any) }
       if inp.empty?
-        inp = [Place.new('input.json', any)]
+        inp = [Place.new('entrypoint', any)]
       end
-      tr_name = "start-#{step}"
+      tr_name = "prepare-#{step}"
       if ps.empty?
         net << Transition.new(in_: inp,
-                              out: [Place.new("steps/#{step}/status/input.json", "'{ #{jqparams[0].join(', ') } }'")],
+                              out: [Place.new("#{step}-entrypoint", 'STDOUT')],
+                              command: %Q!echo '{ #{jqparams[0].join(', ') } }'!,
                               name: tr_name)
       else
         net << Transition.new(in_: inp,
-                              out: [Place.new("steps/#{step}/status/input.json", 'STDOUT')],
-                              command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].flatten.compact.join(' ') }!,
+                              out: [Place.new("#{step}-entrypoint", 'STDOUT')],
+                              command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].flatten.compact.map{ |p| "~(#{p})"}.join(' ') }!,
                               name: tr_name)
       end
     end
 
-    net << Transition.new(in_: [Place.new("steps/#{step}/status/ExecutionState", 'success')],
-                          out: [Place.new("#{step}_ExecutionState", 'success')],
-                          name: "notify-#{step}-result")
+    net << InvocationTransition.new(in_: [IPort.new("#{step}-entrypoint", any, 'entrypoint')],
+                                    out: [OPort.new('cwl.output.json', "#{step}-cwl.output.json"),
+                                          OPort.new('ExecutionState', "#{step}-ExecutionState")],
+                                    use: "steps/#{step}/job.yml",
+                                    tag: 'ep3.system.main',
+                                    tmpdir: "~(tmpdir)/steps/#{step}",
+                                    workdir: "~(workdir)/steps/#{step}",
+                                    name: "start-#{step}")
+
     s.out.each{ |o|
-      net << Transition.new(in_: [Place.new("steps/#{step}/status/ExecutionState", 'success')],
+      net << Transition.new(in_: [Place.new("#{step}-cwl.output.json", any)],
                             out: [Place.new("#{step}_#{o.id}", 'STDOUT')],
-                            command: %Q!jq -c '.#{o.id}' steps/#{step}/status/cwl.output.json!,
+                            command: %Q!jq -c '.#{o.id}' ~(#{step}-cwl.output.json)!,
                             name: "port-#{step}-#{o.id}")
     }
-    net << Transition.new(in_: [Place.new("steps/#{step}/status/ExecutionState", any)],
-                          out: [Place.new("#{step}_ExecutionState", 'STDOUT'), Place.new("ExecutionState", 'STDOUT')],
-                          command: "cat steps/#{step}/status/ExecutionState",
-                          name: "notify-#{step}-result")
   }
 
   cwl.outputs.each{ |out|
@@ -451,15 +451,15 @@ def wfnet(cwl, ids)
                   end
     net << Transition.new(in_: [Place.new(sourceLabel, any)],
                           out: [Place.new(out.id, 'STDOUT')],
-                          command: "jq -c . #{sourceLabel}",
+                          command: "jq -c . ~(#{sourceLabel})",
                           name: "port-#{sourceLabel}-#{out.id}")
   }
 
-  resultPlaces = cwl.steps.map{ |s| Place.new("#{s.id}_ExecutionState", 'success') }
+  resultPlaces = cwl.steps.map{ |s| Place.new("#{s.id}-ExecutionState", any) }
 
   if cwl.outputs.empty?
     net << Transition.new(in_: resultPlaces,
-                          out: [Place.new('cwl.output.json', 'STDOUT'), Place.new('ExecutionState', 'success')],
+                          out: [Place.new('cwl.output.json', 'STDOUT')],
                           command: "echo {}",
                           name: 'generate-output-object')
   else
@@ -470,11 +470,9 @@ def wfnet(cwl, ids)
 
     net << Transition.new(in_: outParams.map{ |o| Place.new(o, any) }+resultPlaces,
                           out: [Place.new('cwl.output.json', 'STDOUT'), Place.new('ExecutionState', 'success')],
-                          command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].join(' ')}!,
+                          command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].map{ |o| "~(#{o})"}.join(' ')}!,
                           name: 'generate-output-object')
   end
-  net << Transition.new(in_: [Place.new('ExecutionState', any)], out: [],
-                        name: 'finish-execution')
 
   net
 end
