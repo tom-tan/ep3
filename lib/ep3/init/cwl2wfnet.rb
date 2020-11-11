@@ -404,7 +404,7 @@ def wfnet(cwl, ids)
                 src.map{ |s_| s_.sub(/\//, '_') }
               end
       i = i+src.length unless src.empty?
-      [%Q!\\"#{param}\\": #{val.gsub(/"/, '\\"').gsub(/\$/, '\\$')}!, label]
+      [%Q!"#{param}": #{val}!, label]
     }.transpose
 
     unless jqparams.empty?
@@ -420,7 +420,7 @@ def wfnet(cwl, ids)
       else
         net << Transition.new(in_: inp,
                               out: [Place.new("steps/#{step}/status/input.json", 'STDOUT')],
-                              command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].flatten.compact.map{ |p| File.join('$STATE_DIR', p) }.join(' ') }!,
+                              command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].flatten.compact.join(' ') }!,
                               name: tr_name)
       end
     end
@@ -431,7 +431,8 @@ def wfnet(cwl, ids)
     s.out.each{ |o|
       net << Transition.new(in_: [Place.new("steps/#{step}/status/ExecutionState", 'success')],
                             out: [Place.new("#{step}_#{o.id}", 'STDOUT')],
-                            command: %Q!jq -c '.#{o.id}' steps/#{step}/status/cwl.output.json!)
+                            command: %Q!jq -c '.#{o.id}' steps/#{step}/status/cwl.output.json!,
+                            name: "port-#{step}-#{o.id}")
     }
     net << Transition.new(in_: [Place.new("steps/#{step}/status/ExecutionState", any)],
                           out: [Place.new("#{step}_ExecutionState", 'STDOUT'), Place.new("ExecutionState", 'STDOUT')],
@@ -450,7 +451,8 @@ def wfnet(cwl, ids)
                   end
     net << Transition.new(in_: [Place.new(sourceLabel, any)],
                           out: [Place.new(out.id, 'STDOUT')],
-                          command: "jq -c . $STATE_DIR/#{sourceLabel}")
+                          command: "jq -c . #{sourceLabel}",
+                          name: "port-#{sourceLabel}-#{out.id}")
   }
 
   resultPlaces = cwl.steps.map{ |s| Place.new("#{s.id}_ExecutionState", 'success') }
@@ -463,12 +465,12 @@ def wfnet(cwl, ids)
   else
     outParams = cwl.outputs.map{ |o| o.id }
     jqparams = outParams.to_enum.with_index.map{ |o, idx|
-      [%Q!\\"#{o}\\": .[#{idx}]!, o]
+      [%Q!"#{o}": .[#{idx}]!, o]
     }.transpose
 
     net << Transition.new(in_: outParams.map{ |o| Place.new(o, any) }+resultPlaces,
                           out: [Place.new('cwl.output.json', 'STDOUT'), Place.new('ExecutionState', 'success')],
-                          command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].map{ |j| File.join('$STATE_DIR', j) }.join(' ')}!,
+                          command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].join(' ')}!,
                           name: 'generate-output-object')
   end
   net << Transition.new(in_: [Place.new('ExecutionState', any)], out: [],

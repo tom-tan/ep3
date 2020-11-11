@@ -10,12 +10,23 @@ def wfnet2medal(net)
         out = tr.out.map{ |o|
             %Q|{ place: "#{o.variable}", pattern: "#{o.value}" }|
         }
-        <<EOT
+        cmd = if tr.command.nil? or tr.command.empty?
+                  '"true"'
+              elsif tr.command.match?(/: /)
+                  <<EOCMD
+ |
+      #{tr.command}
+EOCMD
+              else
+                  tr.command
+              end
+
+        <<EOT.chomp
   - name: "#{tr.name}"
     type: shell
     in: #{if inp.empty? then [] else ["", *inp].join("\n      - ") end}
     out: #{if out.empty? then [] else ["", *out].join("\n      - ") end}
-    command: #{if tr.command.nil? or tr.command.empty? then '"true"' else tr.command end}
+    command: #{cmd}
 EOT
     }
     <<EOS
