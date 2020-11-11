@@ -44,6 +44,7 @@ def ep3_list(args)
   }
   puts JSON.dump(stagein(to_be_skipped, {}, output, dst,
                          opts.include?('copy')))
+  0
 end
 
 if $0 == __FILE__

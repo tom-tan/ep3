@@ -77,6 +77,7 @@ def ep3_init(args)
     raise e
   end
   puts target_dir
+  0
 end
 
 if $0 == __FILE__
