@@ -95,7 +95,7 @@ entrypoint: input.json
 EOS
     }
     logfile = 'medal-log.json'
-    ep3_pid = spawn({ 'PATH' => "#{ENV['EP3_LIBPATH']}/runtime:#{ENV['PATH']}" },
+    ep3_pid = spawn({ 'PATH' => "#{ENV['EP3_LIBPATH']}/runtime:#{ENV['PATH']}", 'EP3_TEMPLATE_DIR' => template_dir },
                     "medal workdir/job.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --debug --log=#{logfile}",
                     :chdir => dir)
     _, status = Process.waitpid2 ep3_pid
@@ -107,6 +107,7 @@ EOS
     end
   rescue Interrupt
     # nop
+    1
   ensure
     unless pid.nil?
       Process.kill :TERM, pid
