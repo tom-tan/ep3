@@ -7,16 +7,16 @@ def run_fluentd(target_dir, template_dir, quiet, debug)
   system_conf = debug ? 'stdout-logger.conf' : 'null-logger.conf'
 
   FileUtils.cp(File.join(template_dir, system_conf),
-               File.join(target_dir, 'fluentd', 'system-logger.conf'))
+               File.join(target_dir, 'workdir', 'fluentd', 'system-logger.conf'))
 
   info_conf = quiet ? 'null-logger.conf' : 'stdout-logger.conf'
 
   FileUtils.cp(File.join(template_dir, info_conf),
-               File.join(target_dir, 'fluentd', 'info-logger.conf'))
+               File.join(target_dir, 'workdir', 'fluentd', 'info-logger.conf'))
 
   logger_path = File.join(ENV['EP3_LIBPATH'], 'run')
   spawn({ 'PATH' => "#{logger_path}:#{ENV['PATH']}"},
-        'fluentd -qqc fluentd/fluentd.conf',
+        'fluentd -qqc workdir/fluentd/fluentd.conf',
         :chdir => target_dir, :out => :err)
 end
 
@@ -82,8 +82,8 @@ def ep3_run(args)
     raise "Directory not found: #{dir}"
   end
 
-  #pid = run_fluentd(dir, template_dir,
-  #                  opts.include?('quiet'), opts.include?('debug'))
+  pid = run_fluentd(dir, template_dir,
+                    opts.include?('quiet'), opts.include?('debug'))
   ep3_pid = nil
   begin
     open(File.join(dir, 'workdir', 'input.json'), 'w') { |f|
@@ -104,9 +104,9 @@ EOS
   rescue Interrupt
     # nop
   ensure
-    #unless pid.nil?
-    #  Process.kill :TERM, pid
-    #end
+    unless pid.nil?
+      Process.kill :TERM, pid
+    end
     unless ep3_pid.nil?
       Process.kill :INT, ep3_pid
     end
