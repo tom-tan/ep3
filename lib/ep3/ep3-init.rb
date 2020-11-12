@@ -3,6 +3,7 @@
 require 'optparse'
 require 'tmpdir'
 require 'fileutils'
+require 'uri'
 require_relative 'init/cwl2wfnet'
 require_relative 'init/wfnet2entr'
 require_relative 'runtime/inspector'
@@ -34,7 +35,10 @@ def ep3_init(args)
          else
            cwl
          end
-  raise "No such file: #{file}" unless File.exist? file
+  uri = URI.parse(file)
+  if (uri.scheme == 'file' or uri.scheme.nil?) and not File.exist?(uri.path)
+    raise "No such file: #{file}"
+  end
 
   force = opts.fetch('force', false)
   target_dir = if opts.include? 'target-dir'
