@@ -58,7 +58,6 @@ def ep3_init(args)
     nets = cwl2wfnet(cwl, dst)
     nets.each{ |n|
       open(File.join(n[:destination], 'job.yml'), 'w') { |f|
-        #f.puts wfnet2entr(n[:net])
         f.puts wfnet2medal(n[:net])
       }
       if opts.include? 'print-dot'

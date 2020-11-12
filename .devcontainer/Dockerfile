@@ -1,6 +1,6 @@
 FROM alpine:3.12
 
-RUN apk --no-cache add ruby ruby-json ruby-etc entr nodejs jq docker-cli \
+RUN apk --no-cache add ruby ruby-json ruby-etc nodejs jq docker-cli \
                        ruby-irb ruby-webrick \
                        python3 py3-pip git
 
