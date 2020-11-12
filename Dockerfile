@@ -17,7 +17,7 @@ COPY --from=medal-dev /work/medal/bin/medal /usr/bin/medal
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update &&
+RUN apt-get update && \
     apt-get -y --no-install-recommends install \
                         ruby nodejs jq ruby-dev gcc make libc-dev && \
     gem install -N fluentd && \
