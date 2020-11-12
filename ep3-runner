@@ -94,7 +94,11 @@ if $0 == __FILE__
       exit ret_run.fetch('return', 1)
     end
 
-    run_cmd("#{basedir}/ep3 list #{target_arg} --copy #{dst_arg}", debug)
+    ret_list = run_cmd("#{basedir}/ep3 list #{target_arg} --copy #{dst_arg}", debug)
+    if ret_list['success']
+      exit 0
+      exit ret_list.fetch('success', 1)
+    end    
   rescue => e
     raise e
   ensure
