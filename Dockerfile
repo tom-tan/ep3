@@ -9,7 +9,6 @@ WORKDIR medal
 
 RUN dub build -b release-static
 
-
 FROM ubuntu:20.04
 
 LABEL maintainer="Tomoya Tanjo <ttanjo@gmail.com>"
@@ -18,10 +17,13 @@ COPY --from=medal-dev /work/medal/bin/medal /usr/bin/medal
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update
-RUN apt-get -y --no-install-recommends install \
+RUN apt-get update &&
+    apt-get -y --no-install-recommends install \
                         ruby nodejs jq ruby-dev gcc make libc-dev && \
-    gem install -N fluentd 
+    gem install -N fluentd && \
+    apt-get purge -y ruby-dev gcc make libc-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY . /ep3
 
