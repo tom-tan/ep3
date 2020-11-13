@@ -10,7 +10,7 @@ on:
 
 jobs:
 
-  build:
+  conformance:
     runs-on: ubuntu-latest
     env:
       RUBYOPT: -W0 # To suppress warnings
@@ -111,6 +111,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_TOKEN }}
+      - name: print
+        run: echo "'$tags'"
+        env:
+          tags: ${{ steps.docker_meta.outputs.tags }}
+
       - name: Build and push
         id: docker_build
         uses: docker/build-push-action@v2
