@@ -111,7 +111,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_TOKEN }}
-      - name: print
+      - name: print 
         run: echo "'$tags'"
         env:
           tags: ${{ steps.docker_meta.outputs.tags }}
