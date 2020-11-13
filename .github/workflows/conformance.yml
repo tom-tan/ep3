@@ -11,7 +11,6 @@ on:
 jobs:
 
   build:
-    if: false
     runs-on: ubuntu-latest
     env:
       RUBYOPT: -W0 # To suppress warnings
@@ -98,7 +97,7 @@ jobs:
         id: docker_meta
         uses: crazy-max/ghaction-docker-meta@v1
         with:
-          images: tom-tan/ep3
+          images: ghcr.io/tom-tan/ep3
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
@@ -110,13 +109,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_TOKEN }}
-      - name: print info
-        run: |
-          echo "'$tags'"
-        env:
-          tags: ${{ steps.docker_meta.outputs.tags }}
       - name: Build and push
-        if: false
         id: docker_build
         uses: docker/build-push-action@v2
         with:
@@ -125,4 +118,3 @@ jobs:
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.docker_meta.outputs.tags }}
-           # ghcr.io/tom-tan/ep3:latest
