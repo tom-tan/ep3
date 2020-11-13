@@ -118,5 +118,5 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
-          tags: | #${{ steps.docker_meta.outputs.tags }}
-            ghcr.io/tom-tan/ep3:latest
+          tags: ${{ steps.docker_meta.outputs.tags }}
+           # ghcr.io/tom-tan/ep3:latest
