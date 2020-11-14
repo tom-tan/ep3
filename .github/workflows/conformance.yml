@@ -17,10 +17,11 @@ jobs:
         fetch-depth: 1
         submodules: true
     - run: |
-        echo "'$tag_name', '$event'"
+        echo "'$REF'"
+        ev="${REF#*/}"
+        echo "event: ${ev%*/}, TAG?: ${ev#/*}"
       env:
-        tag_name: ${{ github.ref }}
-        event: ${{ github.event_name }}
+        REF: ${{ github.ref }}
 
   conformance:
     if: false
