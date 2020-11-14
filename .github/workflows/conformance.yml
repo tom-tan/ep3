@@ -9,7 +9,26 @@ on:
   pull_request: {}
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+        submodules: true
+    - run: |
+        if [ "$has_tag" = "true" ]; then
+          tag="${REF##*/}"
+          echo "tag: ${tag}"
+        else
+          echo "non-tag commit"
+        fi
+      env:
+        REF: ${{ github.ref }}
+        has_tag: ${{ startsWith(github.ref, 'refs/tags/') }}
+
   conformance:
+    if: false
     runs-on: ubuntu-latest
     env:
       RUBYOPT: -W0 # To suppress warnings
