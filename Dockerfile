@@ -7,7 +7,7 @@ RUN apk --no-cache add dub ldc git gcc musl-dev && \
 
 WORKDIR medal
 
-RUN dub build -b release && \
+RUN dub build -b release-static && \
     strip bin/medal
 
 FROM alpine:3.12.0
