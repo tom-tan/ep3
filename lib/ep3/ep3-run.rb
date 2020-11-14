@@ -3,23 +3,6 @@
 require 'optparse'
 require_relative 'runtime/inspector'
 
-def run_fluentd(target_dir, template_dir, quiet, debug)
-  system_conf = debug ? 'stdout-logger.conf' : 'null-logger.conf'
-
-  FileUtils.cp(File.join(template_dir, system_conf),
-               File.join(target_dir, 'workdir', 'fluentd', 'system-logger.conf'))
-
-  info_conf = quiet ? 'null-logger.conf' : 'stdout-logger.conf'
-
-  FileUtils.cp(File.join(template_dir, info_conf),
-               File.join(target_dir, 'workdir', 'fluentd', 'info-logger.conf'))
-
-  logger_path = File.join(ENV['EP3_LIBPATH'], 'run')
-  spawn({ 'PATH' => "#{logger_path}:#{ENV['PATH']}"},
-        'fluentd -qqc workdir/fluentd/fluentd.conf',
-        :chdir => target_dir, :out => :err)
-end
-
 def detailed_input(input, dir)
   obj = if input.end_with? '.json'
           open(input) { |inp|
@@ -82,8 +65,7 @@ def ep3_run(args)
     raise "Directory not found: #{dir}"
   end
 
-  pid = run_fluentd(dir, template_dir,
-                    opts.include?('quiet'), opts.include?('debug'))
+  tail_pid = nil
   ep3_pid = nil
   begin
     open(File.join(dir, 'workdir', 'input.json'), 'w') { |f|
@@ -95,9 +77,14 @@ entrypoint: input.json
 EOS
     }
     logfile = 'medal-log.json'
+    system("touch #{logfile}", :chdir => dir)
     ep3_pid = spawn({ 'PATH' => "#{ENV['EP3_LIBPATH']}/runtime:#{ENV['PATH']}", 'EP3_TEMPLATE_DIR' => template_dir },
                     "medal workdir/job.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --debug --log=#{logfile}",
                     :chdir => dir)
+    if opts.include?('debug')
+      tail_pid = spawn("tail -f #{logfile}", :chdir => dir, :out => :err)
+    end
+
     _, status = Process.waitpid2 ep3_pid
     ep3_pid = nil
     if status.exited?
@@ -109,11 +96,11 @@ EOS
     # nop
     1
   ensure
-    unless pid.nil?
-      Process.kill :TERM, pid
+    unless tail_pid.nil?
+      Process.kill :TERM, tail_pid
     end
     unless ep3_pid.nil?
-      Process.kill :INT, ep3_pid
+      Process.kill :TERM, ep3_pid
     end
     Process.waitall
   end
