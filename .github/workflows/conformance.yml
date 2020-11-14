@@ -164,9 +164,12 @@ jobs:
     needs: [info, conformance]
     if: github.event_name == 'push' && needs.info.outputs.has_tag == 'true'
     steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
       - name: Generate release text
         run: |
-          echo << EOS > release.md
+          echo << EOS > $GITHUB_WORKSPACE/release.md
           ## Conformance tests for CWL ${cwlVersion}
           ep3 version: [![version](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/${tag}/conformance/ep3/cwl_${cwlVersion}/ep3_${tag}/version.json)](https://github.com/tom-tan/ep3/releases/tag/${tag}) [![commit](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/${tag}/conformance/ep3/cwl_${cwlVersion}/ep3_${tag}/commit.json)](https://github.com/tom-tan/ep3/tree/${tag})
           ### Classes
@@ -187,6 +190,6 @@ jobs:
         with:
           tag_name: ${{ needs.info.outputs.tag }}
           release_name: ${{ format('ep3 {0}', needs.info.outputs.tag) }}
-          body_path: ./release.md
+          body_path: ${{ github.workspace }}/release.md
           draft: true
           prerelease: true
