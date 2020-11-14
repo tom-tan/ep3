@@ -85,6 +85,8 @@ jobs:
           cp -r ${conformance_dir}/ep3_master ${conformance_dir}/ep3_latest
           cp -r ${conformance_dir}/ep3_master ${conformance_dir}/ep3_${tag}
           git add ${conformance_dir}/ep3_latest ${conformance_dir}/ep3_${tag}
+          printf '{ "subject": "version", "status": "%s", "color": "green" }' ${tag} > ${conformance_dir}/ep3_latest/version.json
+          cp ${conformance_dir}/ep3_latest/version.json ${conformance_dir}/ep3_${tag}/version.json
         fi
 
         git diff-index --quiet HEAD || git commit -m "Conformance test of ep3 for CWL ${cwlVersion}" -m " Commit: ${GITHUB_SHA}"
