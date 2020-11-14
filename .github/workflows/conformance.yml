@@ -72,8 +72,10 @@ jobs:
       - name: Run conformance test
         run: |
           cd cwl
-          ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner EXTRA='--debug' --badgedir=badges --junit-xml=junit.xml --timeout=30 || true
+          ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner EXTRA='--debug' --badgedir=badges --junit-xml=junit.xml --timeout=$timeout || true
           cd $GITHUB_WORKSPACE
+        env:
+          timeout: 10
       - name: Save badges
         if: success() && github.event_name == 'push'
         run: |
@@ -107,6 +109,7 @@ jobs:
             git tag -a "${tag}" -m "ep3 ${tag}"
           fi
 
+          git push --quiet
           git push --quiet --tags
         env:
           cwlVersion: v1.0
