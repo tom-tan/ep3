@@ -17,9 +17,13 @@ jobs:
         fetch-depth: 1
         submodules: true
     - run: |
-        echo "'$REF'"
-        ev="${REF#*/}"
-        echo "event: ${ev%*/}, TAG?: ${ev#/*}"
+        echo "REF: '$REF'"
+        subref="${REF#*/}"
+        echo "subref: '$subref'"
+        event="${subref%*/}"
+        tag="${subref#/*}"
+        echo "direct: event: ${subref%*/}, TAG?: ${subref#/*}"
+        echo "var:    event: $event, TAG?: $tag"
       env:
         REF: ${{ github.ref }}
 
