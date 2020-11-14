@@ -167,7 +167,7 @@ jobs:
       - name: Generate release text
         run: |
           echo << EOS > $GITHUB_WORKSPACE/release.md
-          ## Conformance tests for CWL v1.0
+          ## Conformance tests for CWL ${cwlVersion}
           ep3 version: [![version](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/${tag}/conformance/ep3/cwl_${cwlVersion}/ep3_${tag}/version.json)](https://github.com/tom-tan/ep3/releases/tag/${tag}) [![commit](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/${tag}/conformance/ep3/cwl_${cwlVersion}/ep3_${tag}/commit.json)](https://github.com/tom-tan/ep3/tree/${tag})
           ### Classes
           [![CommandLineTool](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/${tag}/conformance/ep3/cwl_${cwlVersion}/ep3_${tag}/command_line_tool.json?icon=commonwl)](https://www.commonwl.org/v1.0/CommandLineTool.html) [![ExpressionTool](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/${tag}/conformance/ep3/cwl_${cwlVersion}/ep3_${tag}/expression_tool.json?icon=commonwl)](https://www.commonwl.org/v1.0/Workflow.html#ExpressionTool) [![Workflow](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/${tag}/conformance/ep3/cwl_${cwlVersion}/ep3_${tag}/workflow.json?icon=commonwl)](https://www.commonwl.org/v1.0/Workflow.html)
