@@ -2,6 +2,6 @@
   "dockerComposeFile": "docker-compose.yml",
   "service": "dev",
   "workspaceFolder": "/workspace",
-  "extensions": [],
+  "extensions": ["sbg-rabix.benten-cwl"],
   "postCreateCommand": "test -d cwl || git clone --depth 1 https://github.com/common-workflow-language/common-workflow-language.git /workspace/cwl",
 }
