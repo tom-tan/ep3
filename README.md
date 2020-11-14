@@ -5,8 +5,8 @@
 
 This is a workflow engine for the [Common Workflow Language](https://www.commonwl.org) which aims to have a pluggable architecture.
 
-## Conformance tests for CWL v1.0
-ep3 version: ![commit](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/commit.json)
+## Conformance tests for CWL v1.0 for the latest release
+[![release](https://badgen.net//github/release/tom-tan/ep3)](https://github.com/tom-tan/ep3/releases/latest) ![commit](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/commit.json)
 ### Classes
 [![CommandLineTool](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/command_line_tool.json?icon=commonwl)](https://www.commonwl.org/v1.0/CommandLineTool.html) [![ExpressionTool](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/expression_tool.json?icon=commonwl)](https://www.commonwl.org/v1.0/Workflow.html#ExpressionTool) [![Workflow](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/workflow.json?icon=commonwl)](https://www.commonwl.org/v1.0/Workflow.html)
 
@@ -86,6 +86,6 @@ The `ep3-runner` command consists of the following internal commands:
 The `checks` badge represents the CI result of the latest commit in master branch.
 
 - ![success](https://badgen.net/badge/checks/success/green?icon=commonwl)
-  - It passes the basic test. The CI runner also runs the conformance test for this commit. The [section of conformance test](#conformance-test-for-cwl-v10) will show the result of the conformance test with the latest successful commit of ep3.
+  - It passes the basic tests. The CI runner also runs the conformance tests for this commit. Each result is stored in the [conformance](https://github.com/tom-tan/conformance) repository.
 - ![failure](https://badgen.net/badge/checks/failure/red?icon=commonwl)
-  - It does not pass the basic test. The CI runner skips the conformance test for this commit because it does not work with the most or all the CWL documents.
+  - It does not pass the basic tests. The CI runner skips the conformance test for this commit because it does not work with the most or all the CWL documents.
