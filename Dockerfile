@@ -7,21 +7,17 @@ RUN apk --no-cache add dub ldc git gcc musl-dev && \
 
 WORKDIR medal
 
-RUN dub build -b release-static
+RUN dub build -b release && \
+    strip bin/medal
 
-FROM ubuntu:20.04
+FROM alpine:3.12.0
 
 LABEL maintainer="Tomoya Tanjo <ttanjo@gmail.com>"
 
 COPY --from=medal-dev /work/medal/bin/medal /usr/bin/medal
 
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update && \
-    apt-get -y --no-install-recommends install \
-                        ruby nodejs jq && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN apk --no-cache add ruby ruby-json ruby-etc nodejs jq docker-cli \
+                       ruby-irb ruby-webrick
 
 COPY . /ep3
 
