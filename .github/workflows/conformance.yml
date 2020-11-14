@@ -9,27 +9,7 @@ on:
   pull_request: {}
 
 jobs:
-  test:
-    runs-on: ubuntu-latest 
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 1
-        submodules: true
-    - run: |
-        echo "REF: '$REF'"
-
-        subref="${REF#*/}"
-        event="${subref%/*}"
-        tag="${REF##*/}"
-
-        echo "subref: '$subref'"
-        echo "event: '$event', TAG?: '$tag'"
-      env:
-        REF: ${{ github.ref }}
-
   conformance:
-    if: false
     runs-on: ubuntu-latest
     env:
       RUBYOPT: -W0 # To suppress warnings
@@ -84,20 +64,35 @@ jobs:
         git clone --depth 1 https://${GITHUB_ACTOR}:${CONFORMANCE_TOKEN}@github.com/tom-tan/conformance.git
 
         cd conformance
-        mkdir -p conformance/ep3/cwl_${cwlVersion}
-        rm -rf conformance/ep3/cwl_${cwlVersion}/ep3_latest
-        cp -r $GITHUB_WORKSPACE/cwl/${cwlVersion}/badges conformance/ep3/cwl_${cwlVersion}/ep3_latest
-        commit=$(echo $GITHUB_SHA | cut -b -6)
-        printf '{ "subject": "commit", "status": "%s", "color": "blue" }' $commit > conformance/ep3/cwl_${cwlVersion}/ep3_latest/commit.json
+        conformance_dir=conformance/ep3/cwl_${cwlVersion}
 
-        git add conformance/ep3/cwl_${cwlVersion}/ep3_latest
+        mkdir -p ${conformance_dir}
+        rm -rf ${conformance_dir}/ep3_master
+        cp -r $GITHUB_WORKSPACE/cwl/${cwlVersion}/badges ${conformance_dir}/ep3_master
+        commit=$(echo $GITHUB_SHA | cut -b -6)
+        printf '{ "subject": "commit", "status": "%s", "color": "blue" }' $commit > ${conformance_dir}/ep3_master/commit.json
+
+        subref="${REF#*/}"
+        event="${subref%/*}"
+        tag="${REF##*/}"
+
         git config user.name "ep3 bot"
         git config user.email "ep3-bot@users.noreply.github.com"
+        git add ${conformance_dir}/ep3_master
+
+        if [ "$event" = "tags" ]; then
+          rm -rf ${conformance_dir}/ep3_latest ${conformance_dir}/ep3_${tag}
+          cp -r ${conformance_dir}/ep3_master ${conformance_dir}/ep3_latest
+          cp -r ${conformance_dir}/ep3_master ${conformance_dir}/ep3_${tag}
+          git add ${conformance_dir}/ep3_latest ${conformance_dir}/ep3_${tag}
+        fi
+
         git diff-index --quiet HEAD || git commit -m "Conformance test of ep3 for CWL ${cwlVersion}" -m " Commit: ${GITHUB_SHA}"
         git push --quiet
       env:
         cwlVersion: v1.0
         CONFORMANCE_TOKEN: ${{ secrets.CONFORMANCE_TOKEN }}
+        REF: ${{ github.ref }}
     - uses: actions/upload-artifact@v1
       with:
         name: junit.xml
