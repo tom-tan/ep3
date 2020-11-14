@@ -88,7 +88,12 @@ jobs:
         fi
 
         git diff-index --quiet HEAD || git commit -m "Conformance test of ep3 for CWL ${cwlVersion}" -m " Commit: ${GITHUB_SHA}"
-        git push --quiet
+
+        if [ "$event" = "tags" ]; then
+          git tag -a "${tag}" -m "ep3 ${tag}"
+        fi
+
+        git push --quiet --tags
       env:
         cwlVersion: v1.0
         CONFORMANCE_TOKEN: ${{ secrets.CONFORMANCE_TOKEN }}
