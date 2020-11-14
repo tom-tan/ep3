@@ -188,5 +188,3 @@ jobs:
           tag_name: ${{ needs.info.outputs.tag }}
           release_name: ${{ format('ep3 {0}', needs.info.outputs.tag) }}
           body_path: ${{ github.workspace }}/release.md
-          draft: true
-          prerelease: true
