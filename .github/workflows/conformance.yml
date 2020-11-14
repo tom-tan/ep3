@@ -166,7 +166,7 @@ jobs:
     steps:
       - name: Generate release text
         run: |
-          echo << EOS > $GITHUB_WORKSPACE/release.md
+          echo << EOS > release.md
           ## Conformance tests for CWL ${cwlVersion}
           ep3 version: [![version](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/${tag}/conformance/ep3/cwl_${cwlVersion}/ep3_${tag}/version.json)](https://github.com/tom-tan/ep3/releases/tag/${tag}) [![commit](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/${tag}/conformance/ep3/cwl_${cwlVersion}/ep3_${tag}/commit.json)](https://github.com/tom-tan/ep3/tree/${tag})
           ### Classes
@@ -187,6 +187,6 @@ jobs:
         with:
           tag_name: ${{ needs.info.outputs.tag }}
           release_name: ${{ format('ep3 {0}', needs.info.outputs.tag) }}
-          body_path: $GITHUB_WORKSPACE/release.md
+          body_path: ./release.md
           draft: true
           prerelease: true
