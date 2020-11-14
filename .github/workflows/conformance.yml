@@ -34,100 +34,99 @@ jobs:
       RUBYOPT: -W0 # To suppress warnings
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 1
-        submodules: true
-    - uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: 2.7
-    - name: Install Fluentd
-      run: |
-        gem install -N fluentd
-    - uses: dlang-community/setup-dlang@v1
-      with:
-        compiler: ldc-latest
-    - name: Install medal
-      run: |
-        git clone https://github.com/tom-tan/medal.git
-        cd medal
-        dub build -b release
-        sudo cp bin/medal /usr/bin
-        cd $GITHUB_WORKSPACE
-    - uses: actions/setup-node@v1
-      with:
-        node-version: '12.x'
-    - name: Setup Python for testing
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.8.x'
-    - name: Install cwltest
-      run: pip install cwltest
-    - name: Run example
-      run: cwltest --tool $GITHUB_WORKSPACE/ep3-runner --test test.yml --timeout=30 --junit-xml=junit.xml
-    - uses: actions/upload-artifact@v1
-      if: failure()
-      with:
-        name: junit-example.xml
-        path: junit.xml
-    - name: Prepare CWL repository for conformance test
-      run: git clone --depth 1 https://github.com/common-workflow-language/common-workflow-language.git cwl
-    - name: Run conformance test
-      run: |
-        cd cwl
-        ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner EXTRA='--debug' --badgedir=badges --junit-xml=junit.xml --timeout=30 || true
-        cd $GITHUB_WORKSPACE
-    - name: Save badges
-      if: success() && github.event_name == 'push'
-      run: |
-        git clone --depth 1 https://${GITHUB_ACTOR}:${CONFORMANCE_TOKEN}@github.com/tom-tan/conformance.git
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+          submodules: true
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.7
+      - name: Install Fluentd
+        run: |
+          gem install -N fluentd
+      - uses: dlang-community/setup-dlang@v1
+        with:
+          compiler: ldc-latest
+      - name: Install medal
+        run: |
+          git clone https://github.com/tom-tan/medal.git
+          cd medal
+          dub build -b release
+          sudo cp bin/medal /usr/bin
+          cd $GITHUB_WORKSPACE
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+      - name: Setup Python for testing
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8.x'
+      - name: Install cwltest
+        run: pip install cwltest
+      - name: Run example
+        run: cwltest --tool $GITHUB_WORKSPACE/ep3-runner --test test.yml --timeout=30 --junit-xml=junit.xml
+      - uses: actions/upload-artifact@v1
+        if: failure()
+        with:
+          name: junit-example.xml
+          path: junit.xml
+      - name: Prepare CWL repository for conformance test
+        run: git clone --depth 1 https://github.com/common-workflow-language/common-workflow-language.git cwl
+      - name: Run conformance test
+        run: |
+          cd cwl
+          ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner EXTRA='--debug' --badgedir=badges --junit-xml=junit.xml --timeout=30 || true
+          cd $GITHUB_WORKSPACE
+      - name: Save badges
+        if: success() && github.event_name == 'push'
+        run: |
+          git clone --depth 1 https://${GITHUB_ACTOR}:${CONFORMANCE_TOKEN}@github.com/tom-tan/conformance.git
 
-        cd conformance
-        conformance_dir=conformance/ep3/cwl_${cwlVersion}
+          cd conformance
+          conformance_dir=conformance/ep3/cwl_${cwlVersion}
 
-        mkdir -p ${conformance_dir}
-        rm -rf ${conformance_dir}/ep3_master
-        cp -r $GITHUB_WORKSPACE/cwl/${cwlVersion}/badges ${conformance_dir}/ep3_master
-        commit=$(echo $GITHUB_SHA | cut -b -6)
-        printf '{ "subject": "commit", "status": "%s", "color": "blue" }' $commit > ${conformance_dir}/ep3_master/commit.json
+          mkdir -p ${conformance_dir}
+          rm -rf ${conformance_dir}/ep3_master
+          cp -r $GITHUB_WORKSPACE/cwl/${cwlVersion}/badges ${conformance_dir}/ep3_master
+          commit=$(echo $GITHUB_SHA | cut -b -6)
+          printf '{ "subject": "commit", "status": "%s", "color": "blue" }' $commit > ${conformance_dir}/ep3_master/commit.json
 
-        subref="${REF#*/}"
-        event="${subref%/*}"
-        tag="${REF##*/}"
+          git config user.name "ep3 bot"
+          git config user.email "ep3-bot@users.noreply.github.com"
+          git add ${conformance_dir}/ep3_master
 
-        git config user.name "ep3 bot"
-        git config user.email "ep3-bot@users.noreply.github.com"
-        git add ${conformance_dir}/ep3_master
+          tag="${REF##*/}"
 
-        if [ "$event" = "tags" ]; then
-          rm -rf ${conformance_dir}/ep3_latest ${conformance_dir}/ep3_${tag}
-          cp -r ${conformance_dir}/ep3_master ${conformance_dir}/ep3_latest
-          cp -r ${conformance_dir}/ep3_master ${conformance_dir}/ep3_${tag}
-          git add ${conformance_dir}/ep3_latest ${conformance_dir}/ep3_${tag}
-          printf '{ "subject": "version", "status": "%s", "color": "green" }' ${tag} > ${conformance_dir}/ep3_latest/version.json
-          cp ${conformance_dir}/ep3_latest/version.json ${conformance_dir}/ep3_${tag}/version.json
-        fi
+          if [ "$has_tag" = "true" ]; then
+            rm -rf ${conformance_dir}/ep3_latest ${conformance_dir}/ep3_${tag}
+            cp -r ${conformance_dir}/ep3_master ${conformance_dir}/ep3_latest
+            cp -r ${conformance_dir}/ep3_master ${conformance_dir}/ep3_${tag}
+            git add ${conformance_dir}/ep3_latest ${conformance_dir}/ep3_${tag}
+            printf '{ "subject": "version", "status": "%s", "color": "green" }' ${tag} > ${conformance_dir}/ep3_latest/version.json
+            cp ${conformance_dir}/ep3_latest/version.json ${conformance_dir}/ep3_${tag}/version.json
+          fi
 
-        git diff-index --quiet HEAD || git commit -m "Conformance test of ep3 for CWL ${cwlVersion}" -m " Commit: ${GITHUB_SHA}"
+          git diff-index --quiet HEAD || git commit -m "Conformance test of ep3 for CWL ${cwlVersion}" -m " Commit: ${GITHUB_SHA}"
 
-        if [ "$event" = "tags" ]; then
-          git tag -a "${tag}" -m "ep3 ${tag}"
-        fi
+          if [ "$has_tag" = "true" ]; then
+            git tag -a "${tag}" -m "ep3 ${tag}"
+          fi
 
-        git push --quiet --tags
-      env:
-        cwlVersion: v1.0
-        CONFORMANCE_TOKEN: ${{ secrets.CONFORMANCE_TOKEN }}
-        REF: ${{ github.ref }}
-    - uses: actions/upload-artifact@v1
-      with:
-        name: junit.xml
-        path: cwl/v1.0/junit.xml
+          git push --quiet --tags
+        env:
+          cwlVersion: v1.0
+          CONFORMANCE_TOKEN: ${{ secrets.CONFORMANCE_TOKEN }}
+          REF: ${{ github.ref }}
+          has_tag: ${{ startsWith(github.ref, 'refs/tags/') }}
+      - uses: actions/upload-artifact@v1
+        with:
+          name: junit.xml
+          path: cwl/v1.0/junit.xml
 
   docker:
     runs-on: ubuntu-latest
     needs: conformance
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'push'
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -145,7 +144,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Login to GitHub Container Registry
-        if: github.event_name != 'pull_request'
         uses: docker/login-action@v1 
         with:
           registry: ghcr.io
@@ -158,7 +156,7 @@ jobs:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: |
             ${{ steps.docker_meta.outputs.tags }}
             ghcr.io/tom-tan/ep3:master
