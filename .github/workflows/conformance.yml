@@ -18,12 +18,13 @@ jobs:
         submodules: true
     - run: |
         echo "REF: '$REF'"
+
         subref="${REF#*/}"
+        event="${subref%/*}"
+        tag="${REF##*/}"
+
         echo "subref: '$subref'"
-        event="${subref%*/}"
-        tag="${subref#/*}"
-        echo "direct: event: ${subref%*/}, TAG?: ${subref#/*}"
-        echo "var:    event: $event, TAG?: $tag"
+        echo "event: '$event', TAG?: '$tag'"
       env:
         REF: ${{ github.ref }}
 
