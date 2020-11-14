@@ -25,12 +25,11 @@ Notes:
 ## Requirements
 - [medal](https://github.com/tom-tan/medal)
 - [Ruby](https://www.ruby-lang.org) 2.5.1 or later
-- [Fluentd](https://www.fluentd.org) 1.3.3 or later
 - [jq](https://stedolan.github.io/jq/)
 - [nodejs](https://nodejs.org) for `InlineJavascriptRequirement`
 
 ## How to install
-- Install `medal`, `jq`, `ruby`, `nodejs`, and `fluentd`
+- Install `medal`, `jq`, `ruby` and `nodejs`
 - Execute the following commands and add `/path/to/ep3` to `$PATH`.
 ```console
 $ git clone --recursive https://github.com/tom-tan/ep3.git

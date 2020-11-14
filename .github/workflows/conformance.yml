@@ -38,9 +38,6 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: 2.7
-      - name: Install Fluentd
-        run: |
-          gem install -N fluentd
       - uses: dlang-community/setup-dlang@v1
         with:
           compiler: ldc-latest

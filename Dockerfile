@@ -19,9 +19,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
     apt-get -y --no-install-recommends install \
-                        ruby nodejs jq ruby-dev gcc make libc-dev && \
-    gem install -N fluentd && \
-    apt-get purge -y ruby-dev gcc make libc-dev && \
+                        ruby nodejs jq && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
