@@ -98,7 +98,7 @@ jobs:
             rm -rf ${conformance_dir}/ep3_latest ${conformance_dir}/ep3_${tag}
             cp -r ${conformance_dir}/ep3_master ${conformance_dir}/ep3_latest
             cp -r ${conformance_dir}/ep3_master ${conformance_dir}/ep3_${tag}
-            printf '{ "subject": "version", "status": "%s", "color": "green" }' ${tag} > ${conformance_dir}/ep3_latest/version.json
+            printf '{ "subject": "release", "status": "%s", "color": "blue" }' ${tag} > ${conformance_dir}/ep3_latest/version.json
             cp ${conformance_dir}/ep3_latest/version.json ${conformance_dir}/ep3_${tag}/version.json
             git add ${conformance_dir}/ep3_latest ${conformance_dir}/ep3_${tag}
           fi
@@ -168,7 +168,7 @@ jobs:
         run: |
           cat << EOS > $GITHUB_WORKSPACE/release.md
           ## Conformance tests for CWL ${cwlVersion}
-          ep3 version: [![version](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/${tag}/conformance/ep3/cwl_${cwlVersion}/ep3_${tag}/version.json)](https://github.com/tom-tan/ep3/releases/tag/${tag}) [![commit](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/${tag}/conformance/ep3/cwl_${cwlVersion}/ep3_${tag}/commit.json)](https://github.com/tom-tan/ep3/tree/${tag})
+          [![version](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/${tag}/conformance/ep3/cwl_${cwlVersion}/ep3_${tag}/version.json)](https://github.com/tom-tan/ep3/releases/tag/${tag}) [![commit](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/${tag}/conformance/ep3/cwl_${cwlVersion}/ep3_${tag}/commit.json)](https://github.com/tom-tan/ep3/tree/${tag})
           ### Classes
           [![CommandLineTool](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/${tag}/conformance/ep3/cwl_${cwlVersion}/ep3_${tag}/command_line_tool.json?icon=commonwl)](https://www.commonwl.org/v1.0/CommandLineTool.html) [![ExpressionTool](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/${tag}/conformance/ep3/cwl_${cwlVersion}/ep3_${tag}/expression_tool.json?icon=commonwl)](https://www.commonwl.org/v1.0/Workflow.html#ExpressionTool) [![Workflow](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/${tag}/conformance/ep3/cwl_${cwlVersion}/ep3_${tag}/workflow.json?icon=commonwl)](https://www.commonwl.org/v1.0/Workflow.html)
 
@@ -186,5 +186,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ needs.info.outputs.tag }}
-          release_name: ${{ format('ep3 {0}', needs.info.outputs.tag) }}
+          release_name: ${{ needs.info.outputs.tag }}
           body_path: ${{ github.workspace }}/release.md
