@@ -153,8 +153,8 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ steps.docker_meta.outputs.tags }}
             ghcr.io/tom-tan/ep3:master
+            ${{ steps.docker_meta.outputs.tags }}
 
   release:
     runs-on: ubuntu-latest
