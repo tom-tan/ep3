@@ -41,7 +41,7 @@ jobs:
       - name: Install medal
         run: |
           curl -SL https://github.com/tom-tan/medal/releases/download/${medal_ver}/medal-${medal_ver}-linux-x86_64.tar.gz \
-              | tar xC /usr/bin
+              | sudo tar xC /usr/bin
         env:
           medal_ver: v0.0.2
       - uses: actions/setup-node@v1
