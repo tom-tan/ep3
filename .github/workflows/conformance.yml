@@ -158,7 +158,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    needs: [info, conformance]
+    needs: [info, conformance, docker]
     if: github.event_name == 'push' && needs.info.outputs.has_tag == 'true'
     steps:
       - name: Generate release text
