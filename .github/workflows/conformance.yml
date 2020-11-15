@@ -38,16 +38,12 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: 2.7
-      - uses: dlang-community/setup-dlang@v1
-        with:
-          compiler: ldc-latest
       - name: Install medal
         run: |
-          git clone https://github.com/tom-tan/medal.git
-          cd medal
-          dub build -b release
-          sudo cp bin/medal /usr/bin
-          cd $GITHUB_WORKSPACE
+          curl -SL https://github.com/tom-tan/medal/releases/download/${medal_ver}/medal-${medal_ver}-linux-x86_64.tar.gz \
+              | tar xC /usr/bin
+        env:
+          medal_ver: v0.0.2
       - uses: actions/setup-node@v1
         with:
           node-version: '12.x'
