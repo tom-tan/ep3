@@ -6,7 +6,7 @@
 This is a workflow engine for the [Common Workflow Language](https://www.commonwl.org) which aims to have a pluggable architecture.
 
 ## Conformance tests for CWL v1.0 for the latest release
-[![release](https://badgen.net//github/release/tom-tan/ep3)](https://github.com/tom-tan/ep3/releases/latest) ![commit](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/commit.json)
+[![release](https://badgen.net/github/release/tom-tan/ep3)](https://github.com/tom-tan/ep3/releases/latest) ![commit](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/commit.json)
 ### Classes
 [![CommandLineTool](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/command_line_tool.json?icon=commonwl)](https://www.commonwl.org/v1.0/CommandLineTool.html) [![ExpressionTool](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/expression_tool.json?icon=commonwl)](https://www.commonwl.org/v1.0/Workflow.html#ExpressionTool) [![Workflow](https://badgen.net/https/raw.githubusercontent.com/tom-tan/conformance/master/conformance/ep3/cwl_v1.0/ep3_latest/workflow.json?icon=commonwl)](https://www.commonwl.org/v1.0/Workflow.html)
 
