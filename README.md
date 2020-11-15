@@ -73,9 +73,9 @@ All tests passed
 ### ep3 internals
 The `ep3-runner` command consists of the following internal commands:
 - `ep3 init`
-  - Generates shell scripts that calls `entr`s for the given CWL
+  - Generates Petri nets for medal that represents a given CWL workflow (including internal states in workflow engines such as staging processes)
 - `ep3 run`
-  - Executes generated scripts and start processing a workflow
+  - Executes a medal to run a workflow
 - `ep3 list`
   - Shows the output object for execution result
 - `ep3 resume` (Unimplemented)
