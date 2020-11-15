@@ -24,12 +24,13 @@ Notes:
 
 ## Requirements
 - [medal](https://github.com/tom-tan/medal)
-- [Ruby](https://www.ruby-lang.org) 2.5.1 or later
+- [ruby](https://www.ruby-lang.org) 2.5.1 or later
 - [jq](https://stedolan.github.io/jq/)
 - [nodejs](https://nodejs.org) for `InlineJavascriptRequirement`
+- [docker](https://www.docker.com/) for `DockerRequirement`
 
 ## How to install
-- Install `medal`, `jq`, `ruby` and `nodejs`
+- Install `medal`, `jq`, `ruby`, `nodejs` and `docker`
 - Execute the following commands and add `/path/to/ep3` to `$PATH`.
 ```console
 $ git clone --recursive https://github.com/tom-tan/ep3.git
