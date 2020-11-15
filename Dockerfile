@@ -1,23 +1,14 @@
-FROM alpine:3.12.0 AS medal-dev
-
-WORKDIR /work
-
-RUN apk --no-cache add dub ldc git gcc musl-dev && \
-    git clone --depth 1 https://github.com/tom-tan/medal.git
-
-WORKDIR medal
-
-RUN dub build -b release-static && \
-    strip bin/medal
-
 FROM alpine:3.12.0
 
 LABEL maintainer="Tomoya Tanjo <ttanjo@gmail.com>"
 
-COPY --from=medal-dev /work/medal/bin/medal /usr/bin/medal
+ARG medal_ver=v0.0.2
 
 RUN apk --no-cache add ruby ruby-json ruby-etc nodejs jq docker-cli \
-                       ruby-irb ruby-webrick
+                       ruby-irb ruby-webrick curl && \
+    curl -SL https://github.com/tom-tan/medal/releases/download/${medal_ver}/medal-${medal_ver}-linux-x86_64.tar.gz \
+        | tar xC /usr/bin && \
+    apk del --purge curl
 
 COPY . /ep3
 
