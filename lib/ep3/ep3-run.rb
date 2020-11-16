@@ -77,13 +77,14 @@ entrypoint: input.json
 EOS
     }
     logfile = 'medal-log.json'
-    system("touch #{logfile}", :chdir => dir)
+    debugout = if opts.include?('debug')
+                 :err
+               else
+                 '/dev/null'
+               end
     ep3_pid = spawn({ 'PATH' => "#{ENV['EP3_LIBPATH']}/runtime:#{ENV['PATH']}", 'EP3_TEMPLATE_DIR' => template_dir },
-                    "medal workdir/job.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --debug --log=#{logfile}",
-                    :chdir => dir)
-    if opts.include?('debug')
-      tail_pid = spawn("tail -f #{logfile}", :chdir => dir, :out => :err)
-    end
+                    "bash", "-o", "pipefail", "-c", "medal workdir/job.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --debug 3>&2 2>&1 1>&3 | tee #{logfile}",
+                    :chdir => dir, :err => :out, :out => debugout)
 
     _, status = Process.waitpid2 ep3_pid
     ep3_pid = nil
