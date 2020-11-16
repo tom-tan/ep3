@@ -141,29 +141,29 @@ def replace_extensions(cwl, exts, basedir)
   CommonWorkflowLanguage.load(hash, basedir, {}, hash.fetch('$namespaces', nil))
 end
 
-def convert(dst, ids = [])
+def convert(dst)
   cwl = CommonWorkflowLanguage.load_file(File.join(dst, 'job.cwl'), false)
   case walk(cwl, '.class')
   when 'CommandLineTool', 'ExpressionTool'
     [
       {
         destination: File.join(*dst),
-        net: cmdnet(cwl, ids),
+        net: cmdnet(cwl),
       }
     ]
   when 'Workflow'
     net = {
       destination: File.join(*dst),
-      net: wfnet(cwl, ids),
+      net: wfnet(cwl),
     }
     nets = cwl.steps.map{ |s|
-      convert(File.join(dst, 'steps', s.id), ids+['steps', s.id])
+      convert(File.join(dst, 'steps', s.id))
     }.flatten
     [net, *nets]
   end
 end
 
-def cmdnet(cwl, ids)
+def cmdnet(cwl)
   any = '_'
   net = PetriNet.new('command-line-tool', 'ep3.system.main')
 
@@ -304,7 +304,7 @@ def default_inputs_for_steps(cwl)
   }
 end
 
-def wfnet(cwl, ids)
+def wfnet(cwl)
   any = '_'
   net = PetriNet.new('workflow', 'ep3.system.main')
 
@@ -425,7 +425,7 @@ def wfnet(cwl, ids)
                                     out: [OPort.new('cwl.output.json', "#{step}-cwl.output.json"),
                                           OPort.new('ExecutionState', "#{step}-ExecutionState")],
                                     use: "steps/#{step}/job.yml",
-                                    tag: 'ep3.system.main',
+                                    tag: "~(tag).steps.#{step}",
                                     tmpdir: "~(tmpdir)/steps/#{step}",
                                     workdir: "~(workdir)/steps/#{step}",
                                     name: "start-#{step}")
