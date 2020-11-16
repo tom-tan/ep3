@@ -40,10 +40,10 @@ jobs:
           ruby-version: 2.7
       - name: Install medal
         run: |
-          curl -SL https://github.com/tom-tan/medal/releases/download/${medal_ver}/medal-${medal_ver}-linux-x86_64.tar.gz \
+          curl -SL https://github.com/tom-tan/medal/releases/download/${medal_ver}/medal-linux-x86_64.tar.gz \
               | sudo tar xC /usr/bin
         env:
-          medal_ver: v0.0.3
+          medal_ver: v0.0.4
       - uses: actions/setup-node@v1
         with:
           node-version: '12.x'
