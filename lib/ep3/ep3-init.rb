@@ -5,7 +5,6 @@ require 'tmpdir'
 require 'fileutils'
 require 'uri'
 require_relative 'init/cwl2wfnet'
-require_relative 'init/wfnet2entr'
 require_relative 'runtime/inspector'
 require_relative 'init/wfnet2medal'
 
