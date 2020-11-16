@@ -57,7 +57,7 @@ def wfnet2medal(net)
         end
     }
     <<EOS
-configurations:
+configuration:
   tag: #{net.tag}
 name: #{net.name}
 type: network
