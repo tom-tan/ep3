@@ -338,12 +338,11 @@ def wfnet(cwl)
     }
   }
 
-  cwl.inputs.each{ |inp|
-    net << Transition.new(in_: [Place.new('entrypoint', any)],
-                          out: [Place.new(inp.id, 'STDOUT')],
-                          command: "jq -c '.#{inp.id}' ~(entrypoint)",
-                          name: "parse-#{inp.id}")
-  }
+
+  net << Transition.new(in_: [Place.new('entrypoint', any)],
+                        out: cwl.inputs.map{ |inp| Place.new(inp.id, 'FILE') },
+                        command: cwl.inputs.map{ |inp| "jq -c '.#{inp.id}' ~(entrypoint) > ~(#{inp.id})" }.join("; "),
+                        name: "parse-input")
 
   cwl.steps.each{ |s|
     step = s.id
@@ -430,12 +429,10 @@ def wfnet(cwl)
                                     workdir: "~(workdir)/steps/#{step}",
                                     name: "start-#{step}")
 
-    s.out.each{ |o|
-      net << Transition.new(in_: [Place.new("#{step}-cwl.output.json", any)],
-                            out: [Place.new("#{step}_#{o.id}", 'STDOUT')],
-                            command: %Q!jq -c '.#{o.id}' ~(#{step}-cwl.output.json)!,
-                            name: "port-#{step}-#{o.id}")
-    }
+    net << Transition.new(in_: [Place.new("#{step}-cwl.output.json", any)],
+                          out: s.out.map{ |o| Place.new("#{step}_#{o.id}", 'FILE') },
+                          command: s.out.map{ |o| "jq -c '.#{o.id}' ~(#{step}-cwl.output.json) > ~(#{step}_#{o.id})" }.join("; "),
+                          name: "port-#{step}-cwl.output.json")
   }
 
   cwl.outputs.each{ |out|
