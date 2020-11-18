@@ -338,88 +338,173 @@ def wfnet(cwl)
     }
   }
 
-
-  net << Transition.new(in_: [Place.new('entrypoint', any)],
-                        out: cwl.inputs.map{ |inp| Place.new(inp.id, 'FILE') },
-                        command: cwl.inputs.map{ |inp| "jq -c '.#{inp.id}' ~(entrypoint) > ~(#{inp.id})" }.join("; "),
-                        name: "parse-input")
+  # prevStep => nextStep => prevParam => nextParam
+  outConnections = Hash.new{ |hash, key|
+    hash[key] = Hash.new{ |h, k| h[k] = {} }
+  }
+  # next => { place(prevPlace), index, defaults }
+  inConnections = Hash.new{ |hash, key| hash[key] = [] }
 
   cwl.steps.each{ |s|
     step = s.id
-    ps = s.in.map{ |p|
+    s.in.each{ |p|
       if p.source.empty? and p.default.nil?
-        raise "Warning: #{step}/#{p.id}: in without source nor default is not supported"
+        raise "Error: #{step}/#{p.id}: in without source nor default is not supported"
       end
-      p
-    }.select{ |p|
-      not p.source.empty?
-    }.map{ |param|
-      param.source.map{ |s_|
-        if s_.match %r|^(.+)/(.+)$|
-          "#{$1}_#{$2}"
-        else
-          s_
-        end
+    }
+    if s.in.empty?
+      unless outConnections[nil].include? step
+        outConnections[nil][step] = Hash.new
+      end
+      inConnections[step].push({
+        place: "2#{step}",
+        index: nil,
+        defaults: {},
+      })
+    elsif s.in.all?{ |p| p.source.empty? }
+      unless outConnections[nil].include? step
+        outConnections[nil][step] = Hash.new
+      end
+      s.in.map{ |p|
+        inConnections[step].push({
+          place: "2#{step}",
+          index: nil,
+          default: {
+            param: p.id,
+            value: p.default
+          },
+        })
       }
+    else
+      s.in.each{ |p|
+        default = p.default
+        p.source.each_with_index{ |s_, idx|
+          if s_.match %r|^(.+)/(.+)$|
+            prev = $1
+            prevParam = $2
+          else
+            prev = nil
+            prevParam = s_
+          end
+          outConnections[prev][step][prevParam] = p.id
+          inConnections[step].push({
+            place: "#{prev}2#{step}",
+            index: if p.source.length == 1 then nil else idx end,
+            linkMerge: p.linkMerge,
+            default: {
+              param: p.id,
+              value: default,
+            },
+          })
+        }
+      }
+    end
+  }
+  cwl.outputs.each{ |out|
+    out.outputSource.each_with_index{ |o, idx|
+      if o.match %r|^(.+)/(.+)$|
+        prev = $1
+        prevParam = $2
+      else
+        prev = nil
+        prevParam = o
+      end
+      outConnections[prev][nil][prevParam] = out.id
+      inConnections[nil].push({
+        place: "#{prev}2",
+        index: if out.outputSource.length == 1 then nil else idx end,
+        default: {
+          param: out.id,
+          value: InvalidValue.new,
+        },
+      })
+    }
+  }
+
+  # outConnections: prevStep => nextStep => prevParam => nextParam
+  outConnections.each{ |prev, nexts|
+    trInp = if prev.nil?
+                'entrypoint'
+              else
+                "#{prev}-cwl.output.json"
+              end
+    trOut = nexts.keys.map{ |n|
+      "#{prev}2#{n}"
+    }
+    cmds = nexts.map{ |n, params|
+      pmap = params.map{ |prevParam, nextParam|
+        "#{nextParam}: .#{prevParam}"
+      }.join(', ')
+      %Q!jq '{ #{pmap} }' ~(#{trInp}) > ~(#{prev}2#{n})!
+    }
+    net << Transition.new(in_: [Place.new(trInp, any)],
+                          out: trOut.map{ |tr| Place.new(tr, 'FILE') },
+                          command: cmds.join('; '),
+                          name: "parse-#{trInp}")
+  }
+
+  # next => { place(prevPlace), index, defaults }
+  inConnections.each{ |step, arr|
+    trOut = if step.nil?
+              'cwl.output.json'
+            else
+              "#{step}-entrypoint"
+            end
+    trIn = arr.map{ |e| e[:place] }
+
+    multiInputs = Hash.new{ |h, k| h[k] = [] }
+    elems = arr.sort_by{ |h| h[:index] }.each_with_index.map{ |hash, idx|
+      if hash[:index].nil?
+        if hash[:default][:value].instance_of?(InvalidValue)
+          %Q!#{hash[:default][:param]}: .[#{idx}].#{hash[:default][:param]}!
+        else
+          %Q!#{hash[:default][:param]}: (.[#{idx}].#{hash[:default][:param]} // #{JSON.dump(hash[:default][:value].to_h)})!
+        end
+      else
+        if multiInputs.include?(hash[:default][:param])
+          multiInputs[hash[:default][:param]][:sources].push ".[#{idx}].#{hash[:default][:param]}"
+        else
+          multiInputs[hash[:default][:param]] = {
+            linkMerge: hash[:linkMerge],
+            sources: [".[#{idx}].#{hash[:default][:param]}"]
+          }
+        end
+        nil
+      end
+    }.compact + multiInputs.map{ |param, vs|
+      ss = vs[:sources]
+      val = if ss.length == 1
+              ss.first
+            elsif vs[:linkMerge] == 'merge_nested'
+              "[#{ss.join(', ')}]"
+            elsif vs[:linkMerge] == 'merge_flattened'
+              "(#{vs[:sources].join(' + ')})"
+            else
+              raise CWLInspectionError, "Unknown linkMerge: #{vs[:linkMerge]}"
+            end
+      %Q!#{param}: #{val}!
     }
 
-    i = 0
-    jqparams = s.in.map{ |p|
-      param = p.id
-      src, default = p.source, p.default
-      val = if src.empty?
-              JSON.dump(default.to_h)
-            else
-              vals_ = (i...(i+src.length)).map{ |j|
-                ".[#{j}]"
-              }
-              vals = if vals_.length == 1
-                       vals_.first
-                     elsif p.linkMerge == 'merge_nested'
-                       "[#{vals_.join(', ')}]"
-                     elsif p.linkMerge == 'merge_flattened'
-                       "(#{vals_.join(' + ')})"
-                     else
-                       raise CWLInspectionError, 'Error'
-                     end
-              if default.instance_of?(InvalidValue)
-                vals
-              else
-                "(#{vals} // #{JSON.dump(default.to_h)})"
-              end
-            end
-      label = if src.empty?
-                nil
-              else
-                src.map{ |s_| s_.sub(/\//, '_') }
-              end
-      i = i+src.length unless src.empty?
-      [%Q!"#{param}": #{val}!, label]
-    }.transpose
-
-    if jqparams.empty?
-      net << Transition.new(in_: [Place.new('entrypoint', any)],
-                            out: [Place.new("#{step}-entrypoint", '$EP3_TEMPLATE_DIR/empty.json')],
-                            name: "prepare-#{step}")
-    else
-      inp = ps.flatten.map{ |p| Place.new(p, any) }
-      if inp.empty?
-        inp = [Place.new('entrypoint', any)]
-      end
-      tr_name = "prepare-#{step}"
-      if ps.empty?
-        net << Transition.new(in_: inp,
-                              out: [Place.new("#{step}-entrypoint", 'STDOUT')],
-                              command: %Q!echo '{ #{jqparams[0].join(', ') } }'!,
-                              name: tr_name)
-      else
-        net << Transition.new(in_: inp,
-                              out: [Place.new("#{step}-entrypoint", 'STDOUT')],
-                              command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].flatten.compact.map{ |p| "~(#{p})"}.join(' ') }!,
-                              name: tr_name)
-      end
+    trInPlaces = trIn.map{ |t| Place.new(t, any) }
+    if step.nil?
+      trInPlaces.push *cwl.steps.map{ |s| Place.new("#{s.id}-ExecutionState", 'success') }
     end
 
+    trOutPlaces = [Place.new(trOut, 'STDOUT')]
+    if trOut == 'cwl.output.json'
+      trOutPlaces.push Place.new('ExecutionState', 'success')
+    end
+
+    cmd = %Q!jq -cs '{ #{elems.join(', ') } }' #{trIn.map{ |t| "~(#{t})" }.join(' ')}!
+
+    net << Transition.new(in_: trInPlaces,
+                          out: trOutPlaces,
+                          command: cmd,
+                          name: "generate-#{trOut}")
+  }
+
+  cwl.steps.each{ |s|
+    step = s.id
     net << InvocationTransition.new(in_: [IPort.new("#{step}-entrypoint", any, 'entrypoint')],
                                     out: [OPort.new('cwl.output.json', "#{step}-cwl.output.json"),
                                           OPort.new('ExecutionState', "#{step}-ExecutionState")],
@@ -428,47 +513,7 @@ def wfnet(cwl)
                                     tmpdir: "~(tmpdir)/steps/#{step}",
                                     workdir: "~(workdir)/steps/#{step}",
                                     name: "start-#{step}")
-
-    net << Transition.new(in_: [Place.new("#{step}-cwl.output.json", any)],
-                          out: s.out.map{ |o| Place.new("#{step}_#{o.id}", 'FILE') },
-                          command: s.out.map{ |o| "jq -c '.#{o.id}' ~(#{step}-cwl.output.json) > ~(#{step}_#{o.id})" }.join("; "),
-                          name: "port-#{step}-cwl.output.json")
   }
-
-  cwl.outputs.each{ |out|
-    unless out.outputSource.length == 1
-      raise CWLInspectionError, 'Multiple outputSource is not supported'
-    end
-    sourceLabel = if out.outputSource.first.match %r|^(.+)/(.+)$|
-                    "#{$1}_#{$2}"
-                  else
-                    out.outputSource.first
-                  end
-    net << Transition.new(in_: [Place.new(sourceLabel, any)],
-                          out: [Place.new(out.id, 'STDOUT')],
-                          command: "jq -c . ~(#{sourceLabel})",
-                          name: "port-#{sourceLabel}-#{out.id}")
-  }
-
-  resultPlaces = cwl.steps.map{ |s| Place.new("#{s.id}-ExecutionState", any) }
-
-  if cwl.outputs.empty?
-    net << Transition.new(in_: resultPlaces,
-                          out: [Place.new('cwl.output.json', 'STDOUT')],
-                          command: "echo {}",
-                          name: 'generate-output-object')
-  else
-    outParams = cwl.outputs.map{ |o| o.id }
-    jqparams = outParams.to_enum.with_index.map{ |o, idx|
-      [%Q!"#{o}": .[#{idx}]!, o]
-    }.transpose
-
-    net << Transition.new(in_: outParams.map{ |o| Place.new(o, any) }+resultPlaces,
-                          out: [Place.new('cwl.output.json', 'STDOUT'), Place.new('ExecutionState', 'success')],
-                          command: %Q!jq -cs '{ #{jqparams[0].join(', ') } }' #{jqparams[1].map{ |o| "~(#{o})"}.join(' ')}!,
-                          name: 'generate-output-object')
-  end
-
   net
 end
 
