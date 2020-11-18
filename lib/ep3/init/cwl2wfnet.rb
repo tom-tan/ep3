@@ -359,7 +359,7 @@ def wfnet(cwl)
       inConnections[step].push({
         place: "2#{step}",
         index: nil,
-        defaults: {},
+        default: {},
       })
     elsif s.in.all?{ |p| p.source.empty? }
       unless outConnections[nil].include? step
