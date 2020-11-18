@@ -400,26 +400,39 @@ def wfnet(cwl)
       }
     end
   }
-  cwl.outputs.each{ |out|
-    out.outputSource.each_with_index{ |o, idx|
-      if o.match %r|^(.+)/(.+)$|
-        prev = $1
-        prevParam = $2
-      else
-        prev = nil
-        prevParam = o
-      end
-      outConnections[prev][nil][prevParam] = out.id
-      inConnections[nil].push({
-        place: "#{prev}2",
-        index: if out.outputSource.length == 1 then nil else idx end,
-        default: {
-          param: out.id,
-          value: InvalidValue.new,
-        },
-      })
+
+  if cwl.outputs.empty?
+    inp = if cwl.steps.empty?
+            [Place.new('entrypoint', any)]
+          else
+            cwl.steps.map{ |s| Place.new("#{s.id}-ExecutionState", 'success') }
+          end
+    net << Transition.new(in_: inp,
+                          out: [Place.new('cwl.output.json', 'STDOUT'), Place.new('ExecutionState', 'success')],
+                          command: 'echo {}',
+                          name: 'generate-cwl.output.json')
+  else
+    cwl.outputs.each{ |out|
+      out.outputSource.each_with_index{ |o, idx|
+        if o.match %r|^(.+)/(.+)$|
+          prev = $1
+          prevParam = $2
+        else
+          prev = nil
+          prevParam = o
+        end
+        outConnections[prev][nil][prevParam] = out.id
+        inConnections[nil].push({
+          place: "#{prev}2",
+          index: if out.outputSource.length == 1 then nil else idx end,
+          default: {
+            param: out.id,
+            value: InvalidValue.new,
+          },
+        })
+      }
     }
-  }
+  end
 
   # outConnections: prevStep => nextStep => prevParam => nextParam
   outConnections.each{ |prev, nexts|
@@ -488,12 +501,9 @@ def wfnet(cwl)
     }
 
     trInPlaces = trIn.map{ |t| Place.new(t, any) }
-    if step.nil?
-      trInPlaces.push *cwl.steps.map{ |s| Place.new("#{s.id}-ExecutionState", 'success') }
-    end
-
     trOutPlaces = [Place.new(trOut, 'STDOUT')]
     if trOut == 'cwl.output.json'
+      trInPlaces.push *cwl.steps.map{ |s| Place.new("#{s.id}-ExecutionState", 'success') }
       trOutPlaces.push Place.new('ExecutionState', 'success')
     end
 
