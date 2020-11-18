@@ -455,6 +455,8 @@ def wfnet(cwl)
     multiInputs = Hash.new{ |h, k| h[k] = [] }
     elems = arr.sort_by{ |h| h[:index] }.each_with_index.map{ |hash, idx|
       if hash[:index].nil?
+        if hash[:default].empty?
+          nil
         if hash[:default][:value].instance_of?(InvalidValue)
           %Q!#{hash[:default][:param]}: .[#{idx}].#{hash[:default][:param]}!
         else
