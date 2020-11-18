@@ -65,8 +65,7 @@ def ep3_run(args)
     raise "Directory not found: #{dir}"
   end
 
-  tail_pid = nil
-  ep3_pid = nil
+  medal_pid = nil
   begin
     open(File.join(dir, 'workdir', 'input.json'), 'w') { |f|
       f.puts JSON.dump detailed_input(input, dir)
@@ -82,14 +81,14 @@ EOS
                else
                  '/dev/null'
                end
-    ep3_pid = spawn({ 'PATH' => "#{ENV['EP3_LIBPATH']}/runtime:#{ENV['PATH']}", 'EP3_TEMPLATE_DIR' => template_dir },
-                    "bash", "-o", "pipefail", "-c", "medal workdir/job.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --debug 3>&2 2>&1 1>&3 | tee #{logfile}",
-                    :chdir => dir, :err => :out, :out => debugout)
+    medal_pid = spawn({ 'PATH' => "#{ENV['EP3_LIBPATH']}/runtime:#{ENV['PATH']}", 'EP3_TEMPLATE_DIR' => template_dir },
+                      "bash", "-o", "pipefail", "-c", "medal workdir/job.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --debug 3>&2 2>&1 1>&3 | tee #{logfile}",
+                      :chdir => dir, :err => :out, :out => debugout)
 
-    _, status = Process.waitpid2 ep3_pid
-    ep3_pid = nil
+    _, status = Process.waitpid2 medal_pid
+    medal_pid = nil
     if status.exited?
-      0
+      status.exitstatus
     else
       1
     end
@@ -97,11 +96,8 @@ EOS
     # nop
     1
   ensure
-    unless tail_pid.nil?
-      Process.kill :TERM, tail_pid
-    end
-    unless ep3_pid.nil?
-      Process.kill :TERM, ep3_pid
+    unless medal_pid.nil?
+      Process.kill :TERM, medal_pid
     end
     Process.waitall
   end
