@@ -338,11 +338,9 @@ def wfnet(cwl)
     }
   }
 
-  # prevStep => nextStep => prevParam => nextParam
-  outConnections = Hash.new{ |hash, key|
-    hash[key] = Hash.new{ |h, k| h[k] = {} }
-  }
-  # next => { place(prevPlace), index, defaults }
+  # prevStep: [nextStep]
+  outConnections = Hash.new{ |hash, key| hash[key] = [] }
+  # nextStep: [{ prevStep, nextParam, prevParam, index, default }]
   inConnections = Hash.new{ |hash, key| hash[key] = [] }
 
   cwl.steps.each{ |s|
@@ -353,26 +351,23 @@ def wfnet(cwl)
       end
     }
     if s.in.empty?
-      unless outConnections[nil].include? step
-        outConnections[nil][step] = Hash.new
-      end
+      outConnections[nil].push step
       inConnections[step].push({
-        place: "2#{step}",
+        prevStep: nil,
+        nextParam: nil,
+        prevParam: nil,
         index: nil,
-        default: {},
+        default: InvalidValue.new,
       })
     elsif s.in.all?{ |p| p.source.empty? }
-      unless outConnections[nil].include? step
-        outConnections[nil][step] = Hash.new
-      end
+      outConnections[nil].push step
       s.in.map{ |p|
         inConnections[step].push({
-          place: "2#{step}",
+          prevStep: nil,
+          nextParam: p.id,
+          prevParam: nil,
           index: nil,
-          default: {
-            param: p.id,
-            value: p.default
-          },
+          default: p.default,
         })
       }
     else
@@ -386,15 +381,14 @@ def wfnet(cwl)
             prev = nil
             prevParam = s_
           end
-          outConnections[prev][step][prevParam] = p.id
+          outConnections[prev].push step
           inConnections[step].push({
-            place: "#{prev}2#{step}",
+            prevStep: prev,
+            nextParam: p.id,
+            prevParam: prevParam,
             index: if p.source.length == 1 then nil else idx end,
             linkMerge: p.linkMerge,
-            default: {
-              param: p.id,
-              value: default,
-            },
+            default: default,
           })
         }
       }
@@ -421,67 +415,60 @@ def wfnet(cwl)
           prev = nil
           prevParam = o
         end
-        outConnections[prev][nil][prevParam] = out.id
+        outConnections[prev].push nil
         inConnections[nil].push({
-          place: "#{prev}2",
+          prevStep: prev,
+          nextParam: out.id,
+          prevParam: prevParam,
           index: if out.outputSource.length == 1 then nil else idx end,
-          default: {
-            param: out.id,
-            value: InvalidValue.new,
-          },
+          default: InvalidValue.new,
         })
       }
     }
   end
 
-  # outConnections: prevStep => nextStep => prevParam => nextParam
+  # outConnections: prevStep: nextStep
   outConnections.each{ |prev, nexts|
     trInp = if prev.nil?
                 'entrypoint'
               else
                 "#{prev}-cwl.output.json"
               end
-    trOut = nexts.keys.map{ |n|
+    trOut = nexts.map{ |n|
       "#{prev}2#{n}"
     }
-    cmds = nexts.map{ |n, params|
-      pmap = params.map{ |prevParam, nextParam|
-        "#{nextParam}: .#{prevParam}"
-      }.join(', ')
-      %Q!jq '{ #{pmap} }' ~(#{trInp}) > ~(#{prev}2#{n})!
-    }
     net << Transition.new(in_: [Place.new(trInp, any)],
-                          out: trOut.map{ |tr| Place.new(tr, 'FILE') },
-                          command: cmds.join('; '),
-                          name: "parse-#{trInp}")
+                          out: trOut.map{ |tr| Place.new(tr, "~(#{trInp})") },
+                          name: "dup-#{trInp}")
   }
 
-  # next => { place(prevPlace), index, defaults }
+  # nextStep: { prevStep, nextParam, prevParam, index, default }
+  ###
   inConnections.each{ |step, arr|
     trOut = if step.nil?
               'cwl.output.json'
             else
               "#{step}-entrypoint"
             end
-    trIn = arr.map{ |e| e[:place] }
+    trIn = arr.map{ |e| "#{e[:prevStep]}2#{step}" }
 
     multiInputs = Hash.new{ |h, k| h[k] = [] }
     elems = arr.sort_by{ |h| h[:index] }.each_with_index.map{ |hash, idx|
       if hash[:index].nil?
-        if hash[:default].empty?
+        if hash[:nextParam].nil?
           nil
-        elsif hash[:default][:value].instance_of?(InvalidValue)
-          %Q!#{hash[:default][:param]}: .[#{idx}].#{hash[:default][:param]}!
+        elsif hash[:default].instance_of?(InvalidValue)
+          %Q!#{hash[:nextParam]}: .[#{idx}].#{hash[:prevParam]}!
         else
-          %Q!#{hash[:default][:param]}: (.[#{idx}].#{hash[:default][:param]} // #{JSON.dump(hash[:default][:value].to_h)})!
+          %Q!#{hash[:nextParam]}: (.[#{idx}].#{hash[:prevParam]} // #{JSON.dump(hash[:default].to_h)})!
         end
       else
-        if multiInputs.include?(hash[:default][:param])
-          multiInputs[hash[:default][:param]][:sources].push ".[#{idx}].#{hash[:default][:param]}"
+        if multiInputs.include?(hash[:nextParam])
+          multiInputs[hash[:nextParam]][:sources].push ".[#{idx}].#{hash[:prevParam]}"
         else
-          multiInputs[hash[:default][:param]] = {
+          multiInputs[hash[:nextParam]] = {
             linkMerge: hash[:linkMerge],
-            sources: [".[#{idx}].#{hash[:default][:param]}"]
+            sources: [".[#{idx}].#{hash[:prevParam]}"]
           }
         end
         nil
