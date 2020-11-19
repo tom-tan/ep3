@@ -457,6 +457,8 @@ def wfnet(cwl)
       if hash[:index].nil?
         if hash[:nextParam].nil?
           nil
+        elsif hash[:prevParam].nil?
+          %Q!#{hash[:nextParam]}: #{JSON.dump(hash[:default].to_h)}!
         elsif hash[:default].instance_of?(InvalidValue)
           %Q!#{hash[:nextParam]}: .[#{idx}].#{hash[:prevParam]}!
         else
