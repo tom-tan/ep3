@@ -210,7 +210,7 @@ if $0 == __FILE__
   unless File.exist? cwlfile
     raise CWLInspectionError, "#{cwlfile} does not exist"
   end
-  cwl = CommonWorkflowLanguage.load_file(cwlfile)
+  cwl_ = CommonWorkflowLanguage.load_file(cwlfile)
 
   unless File.exist? jobfile
     raise CWLInspectionError, "#{jobfile} does not exist"
@@ -223,7 +223,8 @@ if $0 == __FILE__
           YAML.load_file(jobfile)
         end
   docdir = File.dirname(File.expand_path cwlfile)
-  inputs = parse_inputs(cwl, job, docdir)
+  inputs, reqs = parse_inputs(cwl_, job, docdir)
+  cwl = cwl_merge_requirements(cwl_, reqs)
   runtime = eval_runtime(cwlfile, inputs, outdir, tmpdir, docdir)
 
   req = walk(cwl, '.requirements.InitialWorkDirRequirement', nil)
