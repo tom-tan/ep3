@@ -1,4 +1,4 @@
-name: Conformance
+name: ci
 
 on:
   push:
