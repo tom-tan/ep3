@@ -5,11 +5,6 @@ require 'fileutils'
 require_relative '../runtime/inspector'
 require_relative 'workflownet'
 
-RequirementsForCommandLineTool = [
-  'InlineJavascriptRequirement', 'SchemaDefRequirement', 'DockerRequirement',
-  'SoftwareRequirement', 'InitialWorkDirRequirement', 'EnvVarRequirement',
-  'ShellCommandRequirement', 'ResourceRequirement',
-]
 UnsupportedRequirements = [
   'SoftwareRequirement',
   'ScatterFeatureRequirement', 'StepInputExpressionRequirement',
@@ -33,7 +28,7 @@ def cwl2wfnet(cfile, dst)
   convert(dst)
 end
 
-def prepare(basefile, cfile, dst, dir = [])
+def prepare(basefile, cfile, dst)
   if cfile.instance_of? String
     if cfile.match(/^#(.+)$/)
       cwl = CommonWorkflowLanguage.load_file(basefile+cfile)
@@ -71,7 +66,6 @@ def prepare(basefile, cfile, dst, dir = [])
   when 'Workflow'
     FileUtils.mkdir(File.join(dst, 'steps'))
     cwl.steps.map{ |s|
-      stepdir = dir+['steps', s.id]
       FileUtils.mkdir(File.join(dst, 'steps', s.id))
       unsupported_ = UnsupportedRequirements.select{ |r|
         walk(s, ".requirements.#{r}", nil)
@@ -79,55 +73,9 @@ def prepare(basefile, cfile, dst, dir = [])
       unless unsupported_.empty?
         raise UnsupportedError, "Unsupported requirements: #{unsupported_.join ', '}"
       end
-      prepare(basefile, s.run, File.join(dst, 'steps', s.id), stepdir)
+      prepare(basefile, s.run, File.join(dst, 'steps', s.id))
     }
   end
-end
-
-def merge_extensions(cwl, exts)
-  hash = cwl.to_h
-  propagated = RequirementsForCommandLineTool
-
-  precedencedReqs = hash.fetch('requirements', []).map{ |r| r['class'] }
-  propedReqs = exts.fetch('requirements', []).map{ |r| r['class'] }.select{ |r|
-    propagated.include?(r) and not precedencedReqs.include?(r)
-  }
-  newReqs = if propedReqs.empty?
-              hash.fetch('requirements', [])
-            else
-              hash.fetch('requirements', [])+propedReqs.map{ |r|
-                {
-                  'class' => r,
-                  '$mixin' => "../status/requirement-#{r}",
-                }
-              }
-            end
-
-  precedencedHints = hash.fetch('hints', []).map{ |h| h['class'] }
-  propedHints = exts.fetch('hints', []).map{ |h| h['class'] }.select{ |h|
-    propagated.include?(h) and not precedencedHints.include?(h)
-  }
-  newHints = if propedHints.empty?
-               hash.fetch('hints', [])
-             else
-               hash.fetch('hints', [])+propedHints.map{ |h|
-                 {
-                   'class' => h,
-                   '$mixin' => "../status/hint-#{h}"
-                 }
-               }
-             end
-  {
-    'requirements' => newReqs,
-    'hints' => newHints,
-  }
-end
-
-def replace_extensions(cwl, exts, basedir)
-  hash = cwl.to_h
-  hash['requirements'] = exts['requirements']
-  hash['hints'] = exts['hints']
-  CommonWorkflowLanguage.load(hash, basedir, {}, hash.fetch('$namespaces', nil))
 end
 
 def convert(dst)
