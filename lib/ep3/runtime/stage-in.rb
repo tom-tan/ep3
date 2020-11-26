@@ -106,9 +106,9 @@ def need_staging(obj)
   end
 end
 
-def process_init_work_dir(req, cwl, inputs, outdir, runtime)
+def process_init_work_dir(dirs, cwl, inputs, outdir, runtime)
   staged_inputs = {}
-  req.listing.each{ |lst|
+  dirs.listing.each{ |lst|
     jsreq = get_requirement(cwl, 'InlineJavascriptRequirement')
     case lst
     when CWLFile
@@ -227,9 +227,9 @@ if $0 == __FILE__
   cwl = cwl_merge_requirements(cwl_, reqs)
   runtime = eval_runtime(cwlfile, inputs, outdir, tmpdir, docdir)
 
-  req = walk(cwl, '.requirements.InitialWorkDirRequirement', nil)
-  staged_inputs = if req
-                    process_init_work_dir(req, cwl, inputs, outdir, runtime)
+  dirs = walk(cwl, '.requirements.InitialWorkDirRequirement', nil)
+  staged_inputs = if dirs
+                    process_init_work_dir(dirs, cwl, inputs, outdir, runtime)
                   else
                     {}
                   end
@@ -239,5 +239,5 @@ if $0 == __FILE__
   }
 
   ret = stagein(to_be_skipped, staged_inputs, inputs, outdir)
-  puts JSON.dump(ret)
+  puts JSON.dump(ret.merge(reqs.transform_values{ |rs| rs.map{ |r| r.to_h } }))
 end

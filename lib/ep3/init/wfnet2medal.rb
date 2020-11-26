@@ -10,8 +10,13 @@ def tr2medal(tr)
     }
     cmd = if tr.command.nil? or tr.command.empty?
               '"true"'
+          elsif tr.command.instance_of? Array
+            <<EOARR.chomp
+ |
+      #{tr.command.join("\n"+' '*6)}
+EOARR
           elsif tr.command.match?(/: /)
-              <<EOCMD.chomp
+            <<EOCMD.chomp
  |
       #{tr.command}
 EOCMD

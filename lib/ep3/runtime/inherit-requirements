@@ -1,0 +1,79 @@
+#!/usr/bin/env ruby
+# coding: utf-8
+require 'json'
+require 'yaml'
+require 'optparse'
+require_relative 'inspector'
+
+RequirementsForCommandLineTool = [
+  'InlineJavascriptRequirement', 'SchemaDefRequirement', 'DockerRequirement',
+  'SoftwareRequirement', 'InitialWorkDirRequirement', 'EnvVarRequirement',
+  'ShellCommandRequirement', 'ResourceRequirement',
+]
+
+if $0 == __FILE__
+  tmpdir = '/tmp'
+  outdir = File.absolute_path Dir.pwd
+
+  opt = OptionParser.new
+  opt.banner = "#{$0} [options] <cwl> <step> <input>"
+  opt.parse!(ARGV)
+
+  unless ARGV.length == 3
+    puts opt.help
+    exit
+  end
+
+  cwlfile, step, jobfile = ARGV
+  unless File.exist? cwlfile
+    raise CWLInspectionError, "#{cwlfile} does not exist"
+  end
+  cwl_ = CommonWorkflowLanguage.load_file(cwlfile)
+
+  unless File.exist? jobfile
+    raise CWLInspectionError, "#{jobfile} does not exist"
+  end
+  job = if jobfile.end_with? '.json'
+          open(jobfile) { |f|
+            JSON.load(f)
+          }
+        else
+          YAML.load_file(jobfile)
+        end
+  docdir = File.dirname(File.expand_path cwlfile)
+  inputs, reqs = parse_inputs(cwl_, job, docdir)
+  cwl = cwl_merge_requirements(cwl_, reqs)
+  runtime = eval_runtime(cwlfile, inputs, outdir, tmpdir, docdir)
+  
+  reqs = cwl.requirements.evaluate(get_requirement(cwl, 'InlineJavascriptRequirement', false),
+                                   inputs, runtime)
+  hints = cwl.hints.evaluate(get_requirement(cwl, 'InlineJavascriptRequirement', false),
+                             inputs, runtime)
+
+  sreqs = walk(cwl, ".steps.#{step}.requirements")
+  shints = walk(cwl, ".steps.#{step}.hints")
+
+  # TODO: all requirements should be inherited if the step is sub-workflow
+  inheritReqs = merge_requirements(sreqs, reqs)
+                  .keep_if{ |r| RequirementsForCommandLineTool.include? r.class.to_s }
+                  .sort_by{ |r| r.class.to_s }
+  inheritHints = merge_requirements(shints, hints)
+                  .keep_if{ |r| RequirementsForCommandLineTool.include? r.class.to_s }
+                  .sort_by{ |h| h.class.to_s }
+                  .delete_if{ |h|
+                    inheritReqs.any?{ |r|
+                      r.instance_of? h.class
+                    }
+                  }
+
+  ret = Hash.new
+  unless inheritReqs.empty?
+    ret['cwl-inspector:weak-requirements'] = inheritReqs.to_h
+  end
+
+  unless inheritHints.empty?
+    ret['cwl-inspector:weak-hints'] = inheritHints.to_h
+  end
+
+  puts JSON.dump(ret)
+end

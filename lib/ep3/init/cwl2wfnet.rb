@@ -33,7 +33,7 @@ def cwl2wfnet(cfile, dst)
   convert(dst)
 end
 
-def prepare(basefile, cfile, dst, exts = {}, dir = [])
+def prepare(basefile, cfile, dst, dir = [])
   if cfile.instance_of? String
     if cfile.match(/^#(.+)$/)
       cwl = CommonWorkflowLanguage.load_file(basefile+cfile)
@@ -50,8 +50,6 @@ def prepare(basefile, cfile, dst, exts = {}, dir = [])
   else
     cwl = cfile
   end
-  exts = merge_extensions(cwl, exts)
-  cwl = replace_extensions(cwl, exts, File.dirname(basefile))
 
   unsupported = UnsupportedRequirements.select{ |r|
     walk(cwl, ".requirements.#{r}", nil)
@@ -71,7 +69,6 @@ def prepare(basefile, cfile, dst, exts = {}, dir = [])
   case walk(cwl, '.class')
   when 'CommandLineTool', 'ExpressionTool'
   when 'Workflow'
-    defaults = default_inputs_for_steps(cwl)
     FileUtils.mkdir(File.join(dst, 'steps'))
     cwl.steps.map{ |s|
       stepdir = dir+['steps', s.id]
@@ -82,15 +79,7 @@ def prepare(basefile, cfile, dst, exts = {}, dir = [])
       unless unsupported_.empty?
         raise UnsupportedError, "Unsupported requirements: #{unsupported_.join ', '}"
       end
-      stepExt = merge_extensions({
-                                   'requirements' => s.requirements.to_h
-                                 }, exts)
-      prepare(basefile, s.run, File.join(dst, 'steps', s.id), stepExt, stepdir)
-      if defaults.include? s.id
-        open(File.join(dst, 'steps', s.id, 'status', 'input.json'), 'w') { |f|
-          f.puts defaults[s.id]
-        }
-      end
+      prepare(basefile, s.run, File.join(dst, 'steps', s.id), stepdir)
     }
   end
 end
@@ -308,36 +297,6 @@ def wfnet(cwl)
   any = '_'
   net = PetriNet.new('workflow', 'ep3.system.main')
 
-  cwl.steps.each{ |s|
-    propagated = (cwl.requirements.map{ |r| r.class_ } +
-                  s.requirements.map{ |r| r.class_ }).sort.uniq.select{ |r|
-      RequirementsForCommandLineTool.include? r
-    }
-    propagated.each{ |r|
-      req = if walk(cwl, ".steps.#{s.id}.requirements.#{r}")
-              ".steps.#{s.id}.requirements.#{r}"
-            else
-              ".requirements.#{r}"
-            end
-      raise "Inheritance of requirements is not implemented!"
-      net << Transition.new(in_: [Place.new('entrypoint', any)],
-                            out: [Place.new("#{s.id}-requirement-#{r}", 'STDOUT')],
-                            command: "inspector.rb --evaluate-expressions job.cwl #{req} -i ~(entrypoint)",
-                            name: "propagate-req-#{r}")
-    }
-
-    cwl.hints.select{ |r|
-      not propagated.include?(r.class_) and
-        RequirementsForCommandLineTool.include? r.class_
-    }.each{ |r|
-      raise "Inheritance of hints is not implemented!"
-      net << Transition.new(in_: [Place.new('entrypoint', any)],
-                            out: [Place.new("#{s.id}-hint-#{r.class_}", 'STDOUT')],
-                            command: "inspector.rb --evaluate-expressions job.cwl .hints.#{r.class_} -i ~(entrypoint)",
-                            name: "propagate-hint-#{r.class_}")
-    }
-  }
-
   # prevStep: [nextStep]
   outConnections = Hash.new{ |hash, key| hash[key] = [] }
   # nextStep: [{ prevStep, nextParam, prevParam, index, default }]
@@ -437,13 +396,22 @@ def wfnet(cwl)
     trOut = nexts.map{ |n|
       "#{prev}2#{n}"
     }
+    cmds = nil
+    reqPlaces = []
+    if prev.nil?
+      reqPlaces = cwl.steps.map{ |s| Place.new("#{s.id}-requirements", 'FILE') }
+      cmds = cwl.steps.map{ |s|
+        "inherit-requirements job.cwl #{s.id} ~(entrypoint) > ~(#{s.id}-requirements)"
+      }
+    end
+
     net << Transition.new(in_: [Place.new(trInp, any)],
-                          out: trOut.map{ |tr| Place.new(tr, "~(#{trInp})") },
+                          out: trOut.map{ |tr| Place.new(tr, "~(#{trInp})") }+reqPlaces,
+                          command: cmds,
                           name: "dup-#{trInp}")
   }
 
-  # nextStep: { prevStep, nextParam, prevParam, index, default }
-  ###
+  # inConnections: nextStep: { prevStep, nextParam, prevParam, index, default }
   inConnections.each{ |step, arr|
     trOut = if step.nil?
               'cwl.output.json'
@@ -451,6 +419,9 @@ def wfnet(cwl)
               "#{step}-entrypoint"
             end
     trIn = arr.map{ |e| "#{e[:prevStep]}2#{step}" }
+    unless step.nil?
+      trIn.push "#{step}-requirements"
+    end
 
     multiInputs = Hash.new{ |h, k| h[k] = [] }
     elems = arr.sort_by{ |h| h[:index] }.each_with_index.map{ |hash, idx|
@@ -496,7 +467,11 @@ def wfnet(cwl)
       trOutPlaces.push Place.new('ExecutionState', 'success')
     end
 
-    cmd = %Q!jq -cs '{ #{elems.join(', ') } }' #{trIn.map{ |t| "~(#{t})" }.join(' ')}!
+    query = "{ #{elems.join(', ') } }"
+    unless step.nil?
+      query << "+.[#{trIn.length-1}]"
+    end
+    cmd = %Q!jq -cs '#{query}' #{trIn.map{ |t| "~(#{t})" }.join(' ')}!
 
     net << Transition.new(in_: trInPlaces,
                           out: trOutPlaces,
