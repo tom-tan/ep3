@@ -43,14 +43,14 @@ jobs:
           curl -SL https://github.com/tom-tan/medal/releases/download/${medal_ver}/medal-linux-x86_64.tar.gz \
               | sudo tar xC /usr/bin
         env:
-          medal_ver: v0.0.11
-      - uses: actions/setup-node@v1
+          medal_ver: v0.4.0
+      - uses: actions/setup-node@v2
         with:
-          node-version: '12.x'
+          node-version: '14.x'
       - name: Setup Python for testing
         uses: actions/setup-python@v2
         with:
-          python-version: '3.8.x'
+          python-version: '3.9.x'
       - name: Install cwltest
         run: pip install cwltest
       - name: Run example

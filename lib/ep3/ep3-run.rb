@@ -81,7 +81,11 @@ EOS
                else
                  '/dev/null'
                end
-    medal_pid = spawn({ 'PATH' => "#{ENV['EP3_LIBPATH']}/runtime:#{ENV['PATH']}" },
+    env = { 'EP3_LIBPATH' => ENV['EP3_LIBPATH'], 'DOCKER_HOST' => ENV.fetch('DOCKER_HOST', '') }
+    if ENV.include? 'DOCKER_HOST'
+      env['DOCKER_HOST'] = ENV['DOCKER_HOST']
+    end
+    medal_pid = spawn(env,
                       "bash", "-o", "pipefail", "-c", "medal workdir/job.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --debug 3>&2 2>&1 1>&3 | tee #{logfile}",
                       :chdir => dir, :err => :out, :out => debugout)
 

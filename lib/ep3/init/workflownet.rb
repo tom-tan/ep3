@@ -111,28 +111,18 @@ class InvocationTransition
 end
 
 class PetriNet
-  attr_reader :transitions, :possible_places, :tag, :name
+  attr_reader :transitions, :possible_places, :tag, :name, :application
 
-  def initialize(name, tag)
+  def initialize(name, tag, application)
     @name = name
     @tag = tag
+    @application = application
     @transitions = Set.new
     @possible_places = Hash.new
   end
 
   def <<(tr)
     @transitions << tr
-    # tr.in.select{ |p|
-    #   p.value != 'STDOUT' and
-    #     p.value != 'STDERR' and
-    #     p.value != 'RETURN'
-    # }.each{ |p|
-    #   var = p.variable
-    #   unless @possible_places.include? var
-    #     @possible_places[var] = Set.new
-    #   end
-    #   @possible_places[var] << p
-    # }
   end
 
   def to_s

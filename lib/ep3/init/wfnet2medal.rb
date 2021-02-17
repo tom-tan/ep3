@@ -63,7 +63,13 @@ def wfnet2medal(net)
     }
     <<EOS
 configuration:
+  application: #{net.application}
   tag: #{net.tag}
+  env:
+    - name: PATH
+      value: $EP3_LIBPATH/runtime:$PATH
+    - name: DOCKER_HOST
+      value: $DOCKER_HOST
 name: #{net.name}
 type: network
 in:

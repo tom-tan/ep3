@@ -81,11 +81,18 @@ end
 def convert(dst)
   cwl = CommonWorkflowLanguage.load_file(File.join(dst, 'job.cwl'), false)
   case walk(cwl, '.class')
-  when 'CommandLineTool', 'ExpressionTool'
+  when 'CommandLineTool'
     [
       {
         destination: File.join(*dst),
         net: cmdnet(cwl),
+      }
+    ]
+  when 'ExpressionTool'
+    [
+      {
+        destination: File.join(*dst),
+        net: expnet(cwl),
       }
     ]
   when 'Workflow'
@@ -102,7 +109,7 @@ end
 
 def cmdnet(cwl)
   any = '_'
-  net = PetriNet.new('command-line-tool', 'ep3.system.main')
+  net = PetriNet.new('command-line-tool', 'ep3.system.main', 'tool')
 
   net << Transition.new(in_: [Place.new('entrypoint', any)],
                         out: [Place.new('input.json', "~(entrypoint)"),
@@ -184,6 +191,91 @@ def cmdnet(cwl)
   net
 end
 
+def expnet(cwl)
+  any = '_'
+  net = PetriNet.new('command-line-tool', 'ep3.system.main', 'expression')
+
+  net << Transition.new(in_: [Place.new('entrypoint', any)],
+                        out: [Place.new('input.json', "~(entrypoint)"),
+                              Place.new('StageIn', 'not-started'), Place.new('CommandGeneration', 'not-started'),
+                              Place.new('Execution', 'not-started'), Place.new('StageOut', 'not-started')],
+                        name: 'prepare')
+  net << Transition.new(in_: [Place.new('StageIn', 'not-started'), Place.new('input.json', any)],
+                        out: [Place.new('StageIn', 'success'),
+                              Place.new('cwl.input.json', 'STDOUT'), Place.new('StageIn.err', 'STDERR')],
+                        command: %q!mkdir -p $MEDAL_TMPDIR/outputs; stage-in.rb --outdir=$MEDAL_TMPDIR/outputs job.cwl ~(input.json)!,
+                        name: 'stage-in')
+
+  net << Transition.new(in_: [Place.new('CommandGeneration', 'not-started'), Place.new('StageIn', 'success'),
+                              Place.new('cwl.input.json', any)],
+                        out: [Place.new('CommandGeneration', 'success'), Place.new('cwl.input.json', '~(cwl.input.json)'),
+                              Place.new('CommandGeneration.command', 'STDOUT'),
+                              Place.new('CommandGeneration.err', 'STDERR')],
+                        command: %Q!inspector.rb job.cwl commandline -i ~(cwl.input.json) --outdir=$MEDAL_TMPDIR/outputs!,
+                        name: 'generate-command')
+
+  net << Transition.new(in_: [Place.new('Execution', 'not-started'), Place.new('CommandGeneration', 'success'),
+                              Place.new('CommandGeneration.command', any)],
+                        out: [Place.new('Execution.return', 'RETURN'), Place.new('Execution.out', 'STDOUT'), Place.new('Execution.err', 'STDERR')],
+                        command: %Q!executor ~(CommandGeneration.command)!,
+                        name: 'execute')
+
+  successCodes = case cwl.class_
+                 when 'CommandLineTool'
+                   cwl.successCodes
+                 when 'ExpressionTool'
+                   [0]
+                 end
+  successCodes.each{ |c|
+    net << Transition.new(in_: [Place.new('Execution.return', c.to_s)],
+                          out: [Place.new('Execution', 'success')],
+                          name: 'verify-success')
+  }
+
+  temporaryFailCodes = case cwl.class_
+                       when 'CommandLineTool'
+                         cwl.temporaryFailCodes
+                       when 'ExpressionTool'
+                         []
+                       end
+  temporaryFailCodes.each{ |c|
+    net << Transition.new(in_: [Place.new('Execution.return', c.to_s)],
+                          out: [Place.new('Execution', 'temporaryFailure')],
+                          name: 'verify-temporaryFailure')
+  }
+  unless temporaryFailCodes.empty?
+    net << Transition.new(in_: [Place.new('Execution', 'temporaryFailure')], out: [],
+                          command: '"false"',
+                          name: 'fail')
+  end
+
+  permanentFailCodes = case cwl.class_
+                       when 'CommandLineTool'
+                         codes = cwl.permanentFailCodes
+                         codes.empty? ? [any] : codes
+                       when 'ExpressionTool'
+                         [any]
+                       end
+  permanentFailCodes.each{ |c|
+    net << Transition.new(in_: [Place.new('Execution.return', c.to_s)], out: [Place.new('Execution', 'permanentFailure')],
+                          name: 'verify-permanentFailure')
+  }
+  unless permanentFailCodes.empty?
+    net << Transition.new(in_: [Place.new('Execution', 'permanentFailure')], out: [],
+                          command: '"false"',
+                          name: 'fail')
+  end
+
+  net << Transition.new(in_: [Place.new('StageOut', 'not-started'), Place.new('Execution', 'success'),
+                              Place.new('cwl.input.json', any)],
+                        out: [Place.new('StageOut', 'success'), Place.new('ExecutionState', 'success'),
+                              Place.new('cwl.output.json', 'STDOUT'), Place.new('StageOut.err', 'STDERR')],
+                        command: %Q!inspector.rb job.cwl list -i ~(cwl.input.json) --json --outdir=$MEDAL_TMPDIR/outputs!,
+                        name: 'stage-out')
+  net
+end
+
+
 def default_inputs_for_steps(cwl)
   ret = {}
   cwl.steps.each{ |s|
@@ -243,7 +335,7 @@ end
 
 def wfnet(cwl)
   any = '_'
-  net = PetriNet.new('workflow', 'ep3.system.main')
+  net = PetriNet.new('workflow', 'ep3.system.main', 'workflow')
 
   # prevStep: [nextStep]
   outConnections = Hash.new{ |hash, key| hash[key] = [] }
