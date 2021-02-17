@@ -1,8 +1,8 @@
-FROM alpine:3.12.0
+FROM alpine:3.13.0
 
 LABEL maintainer="Tomoya Tanjo <ttanjo@gmail.com>"
 
-ARG medal_ver=v0.1.0
+ARG medal_ver=v0.4.0
 
 RUN apk --no-cache add ruby ruby-json ruby-etc nodejs jq docker-cli \
                        ruby-irb ruby-webrick bash curl && \
