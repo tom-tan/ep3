@@ -81,7 +81,7 @@ EOS
                else
                  '/dev/null'
                end
-    env = { 'EP3_LIBPATH' => ENV['EP3_LIBPATH'], 'DOCKER_HOST' => ENV.fetch('DOCKER_HOST', '') }
+    env = { 'EP3_LIBPATH' => ENV['EP3_LIBPATH'] }
     if ENV.include? 'DOCKER_HOST'
       env['DOCKER_HOST'] = ENV['DOCKER_HOST']
     end
