@@ -1,0 +1,203 @@
+id: cwl-metrics
+hooks:
+  - target: root
+    oparations:
+      - type: replace-env
+        env:
+          - name: PATH
+            value: $EP3_EXT_PATH/cwl-metrics/bin:$PATH
+      - type: insert-before
+        target: workflow
+        in:
+          - place: cwl.input.json_
+            pattern: _
+        transitions:
+          - name: start-telegraf
+            type: shell
+            in:
+              - place: cwl.input.json
+                pattern: _
+            out:
+              - place: telegraf-cid
+                pattern: STDOUT
+              - place: cwl.input.json_
+                pattern: ~(cwl.input.json)
+            command: docker run -rm -d ... telegraf -f telegraf.conf # TODO
+      - type: add-transitions
+        on:
+          exit:
+            - name: stop-telegraf
+              type: shell
+              in:
+                - place: telegraf-cid
+                  pattern: _
+              command: | # TODO
+                cid=$(cat ~(tegegraf-cid))
+                docker stop $cid
+            - name: send-metrics
+              type: shell
+              in:
+                - place: cwl.metrics.json
+                  pattern: _
+              command: send-metrics ~(cwl.metrics.json) $ENDPOINT # TODO
+      - type: add-out
+        target: workflow
+        out:
+          - place: cwl.metrics.json
+            port-to: cwl.metrics.json
+
+  - target: workflow
+    precondition: ./rejectSubWorkflows $target
+    operations:
+      - type: replace-env
+        env:
+          - name: PATH
+            value: $EP3_EXT_PATH/cwl-metrics/bin:$PATH
+      - type: insert-before
+        target: dup-entrypoint
+        in:
+          - place: entrypoint_
+            pattern: _
+        transitions:
+          - name: metrics-init
+            type: shell
+            in:
+              - place: entrypoint
+                pattern: _
+            out:
+              - place: start_date
+                pattern: FILE
+              - place: metrics.input.json
+                pattern: FILE
+              - place: entrypoint_
+                pattern: ~(entrypoint)
+            command: |
+              date +'%Y-%m-%d %H:%M:%S' > ~(start_date)
+              cat ~(entrypoint) > ~(metrics.input.json)
+      - type: add-out
+        target: workflow
+        out:
+          - place: cwl.metrics.json
+            pattern: _
+      - type: add-out
+        target: /^start-(.+)$/
+        out:
+          - place: cwl.metrics.json
+            port-to: steps.~1.metrics.json
+      - type: add-transitions
+        transitions:
+          - name: generate-metrics
+            type: shell
+            in:
+              - place: metrics.input.json
+                pattern: _
+              - place: cwl.output.json
+                pattern: _
+              - place: /^steps\..+\.metrics\.json$/
+                pattern: _
+              - place: start_date
+                pattern: _
+            command: |
+              end_date=$(date +'%Y-%m-%d %H:%M:%S')
+              step_metrics=$(echo "~@" | tr ' ' ',')
+              ep3-log-generator --class=Workflow --cwl=job.cwl \
+                --start='~(start_date)' --end="$end_date" \
+                --input=~(metrics.input.json) --output=~(cwl.output.json) \
+                --step-metrics=$step_metrics
+            out:
+              - place: cwl.output.json
+                pattern: ~(cwl.output.json)
+              - place: cwl.metrics.json
+                pattern: STDOUT
+
+  - target: tool
+    precondition: ./requireContainer $target
+    operations:
+      - type: replace-env
+        env:
+          - name: PATH
+            value: $EP3_EXT_PATH/cwl-metrics/bin:$PATH
+      - type: insert-before
+        target: prepare
+        in:
+          - place: entrypoint_
+            pattern: _
+        transitions:
+          - name: start-metrics
+            type: shell
+            in:
+              - place: entrypoint
+                pattern: _
+            out:
+              - place: start_date
+                pattern: FILE
+              - place: metrics.input.json
+                pattern: FILE
+              - place: entrypoint_
+                pattern: ~(entrypoint)
+            command: |
+              date +'%Y-%m-%d %H:%M:%S' > ~(start_date)
+              cat ~(entrypoint) > ~(metrics.input.json)
+      - type: insert-before
+        target: stage-out
+        in:
+          - place: StageOut
+            pattern: not-started
+          - place: Execution
+            pattern: success
+          - place: cwl.input.json_
+            pattern: _
+        transitions:
+          - name: collect-container-info
+            type: shell
+            in:
+              - place: cwl.input.json
+                pattern: _
+            out:
+              - place: metrics.runtime.json
+                pattern: FILE
+              - place: metrics.platform.json
+                pattern: FILE
+              - place: metrics.process.json
+                pattern: FILE
+              - place: cwl.input.json_
+                pattern: ~(cwl.input.json)
+            command: |
+              docker info? > ~(metrics.runtime.json)
+              collect platform info > ~(metrics.platform.json)
+              docker info??? > ~(metrics.process.json)
+      - type: add-transitions
+        transitions:
+          - name: generate-metrics
+            type: shell
+            in:
+              - place: start_date
+                pattern: _
+              - place: metrics.input.json
+                pattern: _
+              - place: metrics.platform.json
+                pattern: _
+              - place: metrics.runtime.json
+                pattern: _
+              - place: metrics.process.json
+                pattern: _
+              - place: cwl.output.json
+                pattern: _
+            command: |
+              end_date=$(date +'%Y-%m-%d %H:%M:%S')
+              ep3_log_generator --class=CommandLineTool --cwl=job.cwl \
+                --start='~(start_date)' --end="$end_date" \
+                --input=~(metrics.input.json) --output=~(cwl.output.json) \
+                --platform=~(metrics.platform.json) \
+                --runtime=~(metrics.runtime.json) \
+                --process=~(metrics.process.json)
+            out:
+              - place: cwl.output.json
+                pattern: ~(cwl.output.json)
+              - place: cwl.metrics.json
+                pattern: STDOUT
+      - type: add-out
+        target: command-line-tool
+        out:
+          - place: cwl.metrics.json
+            pattern: _
