@@ -41,6 +41,8 @@ rescue => e
 end
 
 if $0 == __FILE__
+  extensions = []
+
   parser = OptionParser.new
   parser.banner = "Usage: #{$0} cwl [jobfile]"
   parser.on('--tmpdir=TMP', 'directory for temporary files')
@@ -48,6 +50,9 @@ if $0 == __FILE__
   parser.on('--leave-tmpdir', 'do not remove temporary directory')
   parser.on('--debug', 'enable debug output')
   parser.on('--quiet', 'disable information output')
+  parser.on('--extension', 'specify extension') { |ext|
+    extensions.push ext
+  }
   parser.on('--version', 'show version information') {
     system('git describe', :chdir => File.dirname($0))
     exit
@@ -84,6 +89,15 @@ if $0 == __FILE__
   end
 
   begin
+    unless extensions.empty?
+      ret_hook = run_cmd("#{basedir}/ep3 hook --extensions=#{extensions.join(',')} #{target_arg}")
+      if ret_hook.include? 'interrupted'
+        exit 1
+      elsif not ret_hook['success']
+        exit ret_hook.fetch('return', 1)
+      end
+    end
+
     qopt = quiet ? '--quiet ' : ''
     dopt = debug ? '--debug ' : ''
     ret_run = run_cmd("#{basedir}/ep3 run #{qopt}#{dopt}#{target_arg} #{job}", debug)
