@@ -193,7 +193,7 @@ end
 
 def expnet(cwl)
   any = '_'
-  net = PetriNet.new('command-line-tool', 'ep3.system.main', 'expression')
+  net = PetriNet.new('expression-tool', 'ep3.system.main', 'expression')
 
   net << Transition.new(in_: [Place.new('entrypoint', any)],
                         out: [Place.new('input.json', "~(entrypoint)"),
