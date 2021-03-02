@@ -83,9 +83,19 @@ hooks:
         target: /^start-(.+)$/
         out:
           - place: cwl.metrics.json
-            port-to: steps.~1.metrics.json
+            port-to: steps.~1.metrics.json_
       - type: add-transitions
         transitions:
+          - name: add-~1-step-name
+            type: shell
+            in:
+              - place: /^steps\.(.+)\.metrics\.json_/
+                pattern: _
+            out:
+              - place: steps.~1.metrics.json
+                pattern: STDOUT
+            command: |
+              jq '. + { step_name: ~1 }' ~0
           - name: generate-metrics
             type: shell
             in:
@@ -93,7 +103,7 @@ hooks:
                 pattern: _
               - place: cwl.output.json
                 pattern: _
-              - place: /^steps\..+\.metrics\.json$/
+              - place: /^steps\..+\.metrics\.json$/g
                 pattern: _
               - place: start_date
                 pattern: _
@@ -153,6 +163,8 @@ hooks:
             in:
               - place: cwl.input.json
                 pattern: _
+              - place: container-id
+                pattern: _
             out:
               - place: metrics.runtime.json
                 pattern: FILE
@@ -163,9 +175,11 @@ hooks:
               - place: cwl.input.json_
                 pattern: ~(cwl.input.json)
             command: |
-              docker info? > ~(metrics.runtime.json)
-              collect platform info > ~(metrics.platform.json)
-              docker info??? > ~(metrics.process.json)
+              docker info --format '{{json .}}' | jq '{ "running_containers": .ContainerRunning, "server_version": .ServerVersion, "storage_driver": .Driver, "number_of_cpu": .NCPU, "total_memory": .MemTotal }' > ~(metrics.runtime.json)
+              cid=$(cat ~(container-id))
+              docker inspect $cid | jq "{ \"id\": \\"$cid\\", \"image\": .[0].Config.Image, \"cmd\": .[0].Config.Cmd, \"status\": .[0].State.Status, \"start_time\": .[0].State.StartedAt, \"end_time\": .[0].State.FinishedAt, \"exit_code\": .[0].State.ExitCode }" > ~(metrics.process.json)
+              hostname=$(hostname)
+              echo '{ "hostname": "$hostname", "ncpu_cores": null, "total_memory": null, "disk_size": null }' > ~(metrics.platform.json)
       - type: add-transitions
         transitions:
           - name: generate-metrics
@@ -185,7 +199,7 @@ hooks:
                 pattern: _
             command: |
               end_date=$(date +'%Y-%m-%d %H:%M:%S')
-              ep3_log_generator --class=CommandLineTool --cwl=job.cwl \
+              ep3-log-generator --class=CommandLineTool --cwl=job.cwl \
                 --start='~(start_date)' --end="$end_date" \
                 --input=~(metrics.input.json) --output=~(cwl.output.json) \
                 --platform=~(metrics.platform.json) \
@@ -201,3 +215,7 @@ hooks:
         out:
           - place: cwl.metrics.json
             pattern: _
+
+  - target: expression
+    precondition: "false"
+    operations: []
