@@ -19,7 +19,7 @@ if $0 == __FILE__
     exit
   end
 
-  command_file = *ARGV
+  command_file = ARGV.first
   unless File.exist?(command_file)
     raise "No such file: #{command_file}"
   end
