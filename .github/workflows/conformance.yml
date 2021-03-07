@@ -42,8 +42,11 @@ jobs:
         run: |
           curl -SL https://github.com/tom-tan/medal/releases/download/${medal_ver}/medal-linux-x86_64.tar.gz \
               | sudo tar xC /usr/bin
+          curl -SL https://github.com/tom-tan/medal-hook/releases/download/${medal_hook_ver}/medal-hook-linux-x86_64.tar.gz \
+              | sudo tar xC /usr/bin
         env:
           medal_ver: v0.4.0
+          medal_hook_ver: v0.0.5
       - uses: actions/setup-node@v2
         with:
           node-version: '14.x'
