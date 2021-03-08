@@ -12,10 +12,10 @@ def jobinfo(docClass, cwl,
         end_date: end_date,
         cwl_file: 'job.cwl',
         tool_status: 'success',
-        inputs: open(inputs) { |f|
+        inputs: open(input) { |f|
             JSON.load(f)
         },
-        outputs: open(outputs) { |f|
+        outputs: open(output) { |f|
             JSON.load(f)
         },
         container: {
@@ -47,16 +47,18 @@ def workflowinfo(docClass, cwl,
             end_date: end_date,
             cwl_file: 'job.cwl',
             genome_version: nil,
-            inputs: open(inputs) { |f|
+            inputs: open(input) { |f|
                 JSON.load(f)
             },
-            outputs: open(outputs) { |f|
+            outputs: open(output) { |f|
                 JSON.load(f)
             },
         },
         steps: Hash[
-            steps_metrics.map{ |f|
-                sm = JSON.load(f)
+            step_metrics.map{ |f|
+                sm = open(f) { |ff|
+                    JSON.load(ff)
+                }
                 [sm['stepname'], sm]
             }
         ]
@@ -64,6 +66,17 @@ def workflowinfo(docClass, cwl,
 end
 
 if $0 == __FILE__
+    docClass = nil
+    cwl = nil
+    start_date = nil
+    end_date = nil
+    input = nil
+    output = nil
+    platform = nil
+    runtime = nil
+    process = nil
+    step_metrics = nil
+
     opt = OptionParser.new
     opt.banner = "Usage: #{$0} [options]"
     opt.on('--class=docClass') { |c|

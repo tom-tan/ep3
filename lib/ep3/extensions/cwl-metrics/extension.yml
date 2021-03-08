@@ -5,12 +5,12 @@ hooks:
       - type: replace-env
         env:
           - name: PATH
-            value: $EP3_EXT_PATH/cwl-metrics/bin:$PATH
+            value: $EP3_EXT_PATH/cwl-metrics/bin:~(self)
       - type: insert-before
         target: workflow
         in:
-          - place: cwl.input.json_
-            pattern: _
+          - replaced: cwl.input.json
+            with: cwl.input.json_
         transitions:
           - name: start-telegraf
             type: shell
@@ -52,12 +52,12 @@ hooks:
       - type: replace-env
         env:
           - name: PATH
-            value: $EP3_EXT_PATH/cwl-metrics/bin:$PATH
+            value: $EP3_EXT_PATH/cwl-metrics/bin:~(self)
       - type: insert-before
         target: dup-entrypoint
         in:
-          - place: entrypoint_
-            pattern: _
+          - replaced: entrypoint
+            with: entrypoint_
         transitions:
           - name: metrics-init
             type: shell
@@ -95,7 +95,7 @@ hooks:
               - place: steps.~1.metrics.json
                 pattern: STDOUT
             command: |
-              jq '. + { step_name: "~1" }' ~0
+              jq '. + { stepname: "~1" }' ~0
           - name: generate-metrics
             type: shell
             in:
@@ -127,7 +127,7 @@ hooks:
       - type: replace-env
         env:
           - name: PATH
-            value: $EP3_EXT_PATH/cwl-metrics/bin:$PATH
+            value: $EP3_EXT_PATH/cwl-metrics/bin:~(self)
       - type: replace-transition
         target: execute
         transition:
@@ -152,8 +152,8 @@ hooks:
       - type: insert-before
         target: prepare
         in:
-          - place: entrypoint_
-            pattern: _
+          - replaced: entrypoint
+            with: entrypoint_
         transitions:
           - name: start-metrics
             type: shell
@@ -173,12 +173,8 @@ hooks:
       - type: insert-before
         target: stage-out
         in:
-          - place: StageOut
-            pattern: not-started
-          - place: Execution
-            pattern: success
-          - place: cwl.input.json_
-            pattern: _
+          - replaced: cwl.input.json
+            with: cwl.input.json_
         transitions:
           - name: collect-container-info
             type: shell
