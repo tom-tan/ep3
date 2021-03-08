@@ -50,7 +50,7 @@ if $0 == __FILE__
   parser.on('--leave-tmpdir', 'do not remove temporary directory')
   parser.on('--debug', 'enable debug output')
   parser.on('--quiet', 'disable information output')
-  parser.on('--extension', 'specify extension') { |ext|
+  parser.on('--extension=EXT', 'specify extension') { |ext|
     extensions.push ext
   }
   parser.on('--version', 'show version information') {
@@ -90,7 +90,7 @@ if $0 == __FILE__
 
   begin
     unless extensions.empty?
-      ret_hook = run_cmd("#{basedir}/ep3 hook --extensions=#{extensions.join(',')} #{target_arg}")
+      ret_hook = run_cmd("#{basedir}/ep3 hook --extensions=#{extensions.join(',')} #{target_arg}", debug)
       if ret_hook.include? 'interrupted'
         exit 1
       elsif not ret_hook['success']
