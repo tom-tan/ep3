@@ -15,7 +15,7 @@ out:
   - place: ExecutionState
     pattern: _
 transitions:
-  - name: to-fullpath-input
+  - name: to-fullpath-object
     type: shell
     in:
       - place: input.yml
@@ -23,7 +23,7 @@ transitions:
     out:
       - place: cwl.input.json
         pattern: STDOUT
-    command: cat ~(input.yml)
+    command: to-fullpath-object job.cwl ~(input.yml)
   - name: workflow
     type: invocation
     use: job.yml
