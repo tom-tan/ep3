@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby
 require 'optparse'
 require 'json'
-require 'yaml'
 
 def jobinfo(docClass, cwl,
             start_date, end_date,
