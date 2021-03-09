@@ -1,0 +1,48 @@
+#!/usr/bin/env ruby
+# coding: utf-8
+require 'optparse'
+require_relative 'inspector'
+
+def full_object(cwl, input)
+    obj = YAML.load_file(input)
+    dirname = File.dirname(input)
+    nss = YAML.load_file(cwl).fetch('$namespaces', {})
+    Hash[
+        walk(cwl, '.inputs', []).select{ |inp|
+            obj.fetch(inp.id, nil) or not inp.default.instance_of?(InvalidValue)
+         }.map{ |inp|
+            val = obj.fetch(inp.id, nil)
+            unless inp.default.instance_of?(InvalidValue)
+                val = (val or inp.default)
+            end
+            [
+                inp.id,
+                InputParameter.parse_object(inp.type, val,
+                                            dirname, {}, nss).to_h
+            ]
+         }
+    ]
+end
+
+if $0 == __FILE__
+    opt = OptionParser.new
+    opt.banner = "Usage: #{$0} [options] cwl input"
+    opt.parse!(ARGV)
+
+    unless ARGV.length == 2
+        puts opt.help
+        exit
+    end
+
+    cwl, input = *ARGV
+    unless File.exist?(cwl)
+        raise "File not found: #{cwl}"
+    end
+
+    unless File.exist?(input)
+        raise "File not found: #{input}"
+    end
+
+    obj = full_object(cwl, input)
+    puts JSON.dump(obj)
+end

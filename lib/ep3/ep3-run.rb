@@ -1,30 +1,6 @@
 #!/usr/bin/env ruby
 # coding: utf-8
 require 'optparse'
-require_relative 'runtime/inspector'
-
-def detailed_input(input, dir)
-  obj = if input.end_with? '.json'
-          open(input) { |inp|
-            JSON.load(inp)
-          }
-        else
-          YAML.load_file(input)
-        end
-  dirname = File.dirname input
-  cwlfile = File.join(dir, 'workdir', 'job.cwl')
-  nss = YAML.load_file(cwlfile).fetch('$namespaces', {})
-  Hash[walk(cwlfile, '.inputs', []).select{ |inp|
-         obj.fetch(inp.id, nil) or not inp.default.instance_of?(InvalidValue)
-       }.map{ |inp|
-         val = obj.fetch(inp.id, nil)
-         unless inp.default.instance_of?(InvalidValue)
-           val = (val or inp.default)
-         end
-         [inp.id, InputParameter.parse_object(inp.type, val,
-                                              dirname, {}, nss).to_h]
-       }]
-end
 
 def ep3_run(args)
   parser = OptionParser.new
@@ -67,12 +43,9 @@ def ep3_run(args)
 
   medal_pid = nil
   begin
-    open(File.join(dir, 'workdir', 'input.json'), 'w') { |f|
-      f.puts JSON.dump detailed_input(input, dir)
-    }
     open(File.join(dir, 'workdir', 'init.yml'), 'w') { |f|
       f.puts <<EOS
-input.yml: input.json
+input.yml: #{File.expand_path(input)}
 EOS
     }
     logfile = 'medal-log.json'
@@ -81,7 +54,10 @@ EOS
                else
                  '/dev/null'
                end
-    env = { 'EP3_LIBPATH' => ENV['EP3_LIBPATH'] }
+    env = {
+      'EP3_LIBPATH' => ENV['EP3_LIBPATH'],
+      'EP3_PID' => Process.pid.to_s,
+    }
     if ENV.include? 'DOCKER_HOST'
       env['DOCKER_HOST'] = ENV['DOCKER_HOST']
     end
