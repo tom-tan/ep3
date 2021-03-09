@@ -1,0 +1,33 @@
+#!/usr/bin/env ruby
+require 'optparse'
+require 'json'
+require 'etc'
+
+if $0 == __FILE__
+    opt = OptionParser.new
+    opt.banner = "Usage: #{$0} [options]"
+
+    opt.parse!(ARGV)
+
+    unless ARGV.empty?
+        puts opt.help
+        exit
+    end
+
+    mem = case RUBY_PLATFORM
+          when /linux/
+            `grep ^MemTotal /proc/meminfo | awk '{ print $2 }'`.chomp.to_i
+          when /darwin/
+            `sysctl hw.memsize | awk '{ print $2 }'`.chomp.to_i
+          else
+            # unsupported
+          end
+
+    platform = {
+        hostname: `hostname`.chomp,
+        ncpu_cores: Etc.nprocessors,
+        total_memory: mem,
+        disk_size: `df -k / | awk 'NR==2 { print $2 }'`.chomp.to_i,
+    }
+    puts JSON.dump(platform)
+end

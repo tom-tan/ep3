@@ -198,8 +198,7 @@ hooks:
               docker info --format '{{json .}}' | jq '{ running_containers: .ContainersRunning, server_version: .ServerVersion, storage_driver: .Driver, number_of_cpu: .NCPU, total_memory: .MemTotal }' > ~(metrics.runtime.json)
               cid=$(cat ~(cid))
               docker inspect $cid | jq "{ id: \"$cid\", image: .[0].Config.Image, cmd: .[0].Config.Cmd | join(\" \"), status: .[0].State.Status, start_time: .[0].State.StartedAt, end_time: .[0].State.FinishedAt, exit_code: .[0].State.ExitCode }" > ~(metrics.process.json)
-              hostname=$(hostname)
-              echo "{ \"hostname\": \"$hostname\", \"ncpu_cores\": null, \"total_memory\": null, \"disk_size\": null }" > ~(metrics.platform.json)
+              platform-info-collector > ~(metrics.platform.json)
       - type: add-transitions
         on:
           exit:
