@@ -1,0 +1,40 @@
+configuration:
+  tag: ep3.run
+  env:
+    - name: PATH
+      value: $EP3_LIBPATH/runtime:$PATH
+application: root
+name: root
+type: network
+in:
+  - place: input.yml
+    pattern: _
+out:
+  - place: cwl.output.json
+    pattern: _
+  - place: ExecutionState
+    pattern: _
+transitions:
+  - name: to-fullpath-input
+    type: shell
+    in:
+      - place: input.yml
+        pattern: _
+    out:
+      - place: cwl.input.json
+        pattern: STDOUT
+    command: cat ~(input.yml)
+  - name: workflow
+    type: invocation
+    use: job.yml
+    configuration:
+      tag: ~(tag).main
+    in:
+      - place: cwl.input.json
+        pattern: _
+        port-to: entrypoint
+    out:
+      - place: cwl.output.json
+        port-to: cwl.output.json
+      - place: ExecutionState
+        port-to: ExecutionState

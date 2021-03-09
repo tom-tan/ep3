@@ -72,7 +72,7 @@ def ep3_run(args)
     }
     open(File.join(dir, 'workdir', 'init.yml'), 'w') { |f|
       f.puts <<EOS
-entrypoint: input.json
+input.yml: input.json
 EOS
     }
     logfile = 'medal-log.json'
@@ -86,7 +86,7 @@ EOS
       env['DOCKER_HOST'] = ENV['DOCKER_HOST']
     end
     medal_pid = spawn(env,
-                      "bash", "-o", "pipefail", "-c", "medal workdir/job.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --debug 3>&2 2>&1 1>&3 | tee #{logfile}",
+                      "bash", "-o", "pipefail", "-c", "medal workdir/root.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --debug 3>&2 2>&1 1>&3 | tee #{logfile}",
                       :chdir => dir, :err => :out, :out => debugout)
 
     _, status = Process.waitpid2 medal_pid

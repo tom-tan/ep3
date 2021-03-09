@@ -41,8 +41,12 @@ def ep3_hook(args)
         end
         File.join(ret, e, 'extension.yml')
     }
+
+
     extArgs = extFiles.map{ |e| "--hook=#{e}" }
-    apply(File.join(dir, 'workdir', 'job.yml'), extArgs)
+
+    apply(File.join(dir, 'workdir', 'root.yml'), extArgs)
+    recursiveApply(File.join(dir, 'workdir', 'job.yml'), extArgs)
 end
 
 def apply(network, exts)
@@ -50,17 +54,24 @@ def apply(network, exts)
     unless File.exist?(orig)
         FileUtils.mv(network, orig)
     end
-    ret = system("medal-hook #{orig} #{exts.join(' ')} > #{network}")
-    ret = 0
-    return 1 unless ret
+    system("medal-hook #{orig} #{exts.join(' ')} > #{network}")
+end
+
+def recursiveApply(network, exts)
+    succeeded = apply(network, exts)
+    return 1 unless succeeded
     stepdir = File.join(File.dirname(network), 'steps')
     if Dir.exist?(stepdir)
         Dir.glob("#{stepdir}/*") { |d|
-            r = apply(File.join(d, 'job.yml'), exts)
-            ret = (ret and r)
+            succeeded = recursiveApply(File.join(d, 'job.yml'), exts)
+            break unless succeeded
         }
     end
-    ret
+    if succeeded
+        0
+    else
+        1
+    end
 end
 
 if $0 == __FILE__

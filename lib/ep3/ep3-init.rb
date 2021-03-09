@@ -65,6 +65,7 @@ def ep3_init(args)
         }
       end
     }
+    FileUtils.cp(File.join(template_dir, 'root.yml'), dst)
   rescue UnsupportedError => e
     FileUtils.remove_entry(dst) if Dir.exist? dst
     warn e

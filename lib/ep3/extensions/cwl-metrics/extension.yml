@@ -1,45 +1,45 @@
 id: cwl-metrics
 hooks:
   - target: root
-    oparations:
+    operations:
       - type: replace-env
         env:
           - name: PATH
             value: $EP3_EXT_PATH/cwl-metrics/bin:~(self)
-      - type: insert-before
-        target: workflow
-        in:
-          - replaced: cwl.input.json
-            with: cwl.input.json_
-        transitions:
-          - name: start-telegraf
-            type: shell
-            in:
-              - place: cwl.input.json
-                pattern: _
-            out:
-              - place: telegraf-cid
-                pattern: STDOUT
-              - place: cwl.input.json_
-                pattern: ~(cwl.input.json)
-            command: docker run -rm -d ... telegraf -f telegraf.conf # TODO
-      - type: add-transitions
-        on:
-          exit:
-            - name: stop-telegraf
-              type: shell
-              in:
-                - place: telegraf-cid
-                  pattern: _
-              command: | # TODO
-                cid=$(cat ~(tegegraf-cid))
-                docker stop $cid
-            - name: send-metrics
-              type: shell
-              in:
-                - place: cwl.metrics.json
-                  pattern: _
-              command: send-metrics ~(cwl.metrics.json) $ENDPOINT # TODO
+      # - type: insert-before
+      #   target: workflow
+      #   in:
+      #     - replaced: cwl.input.json
+      #       with: cwl.input.json_
+      #   transitions:
+      #     - name: start-telegraf
+      #       type: shell
+      #       in:
+      #         - place: cwl.input.json
+      #           pattern: _
+      #       out:
+      #         - place: telegraf-cid
+      #           pattern: STDOUT
+      #         - place: cwl.input.json_
+      #           pattern: ~(cwl.input.json)
+      #       command: docker run -rm -d ... telegraf -f telegraf.conf # TODO
+      # - type: add-transitions
+      #   on:
+      #     exit:
+      #       - name: stop-telegraf
+      #         type: shell
+      #         in:
+      #           - place: telegraf-cid
+      #             pattern: _
+      #         command: | # TODO
+      #           cid=$(cat ~(tegegraf-cid))
+      #           docker stop $cid
+      #       - name: send-metrics
+      #         type: shell
+      #         in:
+      #           - place: cwl.metrics.json
+      #             pattern: _
+      #         command: send-metrics ~(cwl.metrics.json) $ENDPOINT # TODO
       - type: add-out
         target: workflow
         out:
