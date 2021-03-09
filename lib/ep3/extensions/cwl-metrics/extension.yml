@@ -128,6 +128,8 @@ hooks:
         env:
           - name: PATH
             value: $EP3_EXT_PATH/cwl-metrics/bin:~(self)
+          - name: EP3_PID
+            value: $EP3_PID
       - type: replace-transition
         target: execute
         transition:

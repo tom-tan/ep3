@@ -1,16 +1,23 @@
 #!/usr/bin/env ruby
 require 'optparse'
 
-def insert_cidarg(cmd, cidfile)
-  cmd.sub('--rm', "--cidfile=#{cidfile}")
+def insert_arg(cmd, name, cidfile)
+  replaced = []
+  replaced << "--name=#{name}" unless name.nil?
+  replaced << "--cidfile=#{cidfile}" unless cidfile.nil?
+  cmd.sub('--rm', replaced.join(' '))
 end
 
 if $0 == __FILE__
   opt = OptionParser.new
   opt.banner = "Usage: #{$0} [options] <command-file>"
   cidfile = nil
+  name = nil
   opt.on('--cidfile=[FILE]') { |cid|
     cidfile = cid
+  }
+  opt.on('--name=NAME') { |n|
+    name = n
   }
   opt.parse!(ARGV)
 
@@ -25,7 +32,9 @@ if $0 == __FILE__
   end
 
   cmd = open(command_file).readlines.join
-  cmd = insert_cidarg(cmd, cidfile) unless cidfile.nil?
+  unless cidfile.nil? and name.nil?
+    cmd = insert_arg(cmd, name, cidfile)
+  end
   system(cmd)
   exit $?.exitstatus
 end
