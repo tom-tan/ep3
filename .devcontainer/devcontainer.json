@@ -1,7 +1,7 @@
 {
   "dockerComposeFile": "docker-compose.yml",
   "service": "dev",
-  "workspaceFolder": "/workspace",
+  "workspaceFolder": "/workspace/ep3",
   "extensions": ["sbg-rabix.benten-cwl", "joaompinto.vscode-graphviz"],
   "postCreateCommand": "sh .devcontainer/install-medal.sh && sh .devcontainer/install-medal-hook.sh && test -d cwl || git clone --depth 1 https://github.com/common-workflow-language/common-workflow-language.git /workspace/cwl",
 }

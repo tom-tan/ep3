@@ -5,9 +5,9 @@ services:
     privileged: true
     environment:
       DOCKER_TLS_CERTDIR: ''
-    working_dir: /workspace
+    working_dir: /workspace/ep3
     volumes:
-      - ..:/workspace
+      - ..:/workspace/ep3
       - /tmp:/tmp
     command: dockerd-entrypoint.sh
   dev:
@@ -16,9 +16,9 @@ services:
       dockerfile: Dockerfile
     environment:
       DOCKER_HOST: tcp://dind:2375/
-    working_dir: /workspace
+    working_dir: /workspace/ep3
     volumes:
-      - ..:/workspace
+      - ..:/workspace/ep3
       - /tmp:/tmp
     command: sleep infinity
     depends_on:
