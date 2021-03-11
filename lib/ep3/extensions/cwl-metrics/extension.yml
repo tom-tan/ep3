@@ -2,10 +2,18 @@ id: cwl-metrics
 hooks:
   - target: root
     operations:
-      - type: replace-env
-        env:
-          - name: PATH
-            value: $EP3_EXT_PATH/cwl-metrics/bin:~(self)
+      # - type: replace-env
+      #   env:
+      #     - name: PATH
+      #       value: $EP3_EXT_PATH/cwl-metrics/bin:~(self)
+      #     - name: TELEGRAF_VERSION
+      #       value: 1.5.0
+      #     - name: EP3_PID
+      #       value: $EP3_PID
+      #     - name: ES_HOST
+      #       value: $ES_HOST
+      #     - name: ES_PORT
+      #       value: $ES_PORT
       # - type: insert-before
       #   target: workflow
       #   in:
@@ -22,7 +30,14 @@ hooks:
       #           pattern: STDOUT
       #         - place: cwl.input.json_
       #           pattern: ~(cwl.input.json)
-      #       command: docker run -rm -d ... telegraf -f telegraf.conf # TODO
+      #       command: |
+      #         docker run --rm -d \
+      #           -v /var/run/docker.sock:/var/run/docker.sock \
+      #           -v $EP3_EXT_PATH/cwl-metrics/conf/telegraf.conf:/etc/telegraf/telegraf.conf:ro \
+      #           -v $MEDAL_TMPDIR/log/telegraf:/var/log/telegraf \
+      #           -e TELEGRAF_VERSION=$TELEGRAF_VERSION \
+      #           -e EP3_PID=$EP3_PID \
+      #           telegraf:${TELEGRAF_VERSION}-alpine
       # - type: add-transitions
       #   on:
       #     exit:
@@ -31,15 +46,25 @@ hooks:
       #         in:
       #           - place: telegraf-cid
       #             pattern: _
-      #         command: | # TODO
+      #         command: |
       #           cid=$(cat ~(tegegraf-cid))
-      #           docker stop $cid
+      #           docker kill $cid
       #       - name: send-metrics
       #         type: shell
       #         in:
       #           - place: cwl.metrics.json
       #             pattern: _
-      #         command: send-metrics ~(cwl.metrics.json) $ENDPOINT # TODO
+      #         out:
+      #           - place: uuid
+      #             pattern: FILE
+      #         command: |
+      #           uuid=$(uuidgen)
+      #           echo $uuid > ~(uuid)
+      #           curl \
+      #             -H "Content-Type: application/json" \
+      #             -X POST \
+      #             "${ES_HOST}:${ES_PORT}/workflow/_doc/${uuid}?pretty" \
+      #             --data-binary @"~(cwl.metrics.json)"
       - type: add-out
         target: workflow
         out:
