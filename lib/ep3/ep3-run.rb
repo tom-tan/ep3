@@ -60,6 +60,8 @@ EOS
     }
     if ENV.include? 'DOCKER_HOST'
       env['DOCKER_HOST'] = ENV['DOCKER_HOST']
+    elsif File.exist?('/var/run/docker.sock')
+      env['DOCKER_HOST'] = 'unix:///var/run/docker.sock'
     end
     medal_pid = spawn(env,
                       "bash", "-o", "pipefail", "-c", "medal workdir/root.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --debug 3>&2 2>&1 1>&3 | tee #{logfile}",

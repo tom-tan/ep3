@@ -2,69 +2,64 @@ id: cwl-metrics
 hooks:
   - target: root
     operations:
-      # - type: replace-env
-      #   env:
-      #     - name: PATH
-      #       value: $EP3_EXT_PATH/cwl-metrics/bin:~(self)
-      #     - name: TELEGRAF_VERSION
-      #       value: 1.5.0
-      #     - name: EP3_PID
-      #       value: $EP3_PID
-      #     - name: ES_HOST
-      #       value: $ES_HOST
-      #     - name: ES_PORT
-      #       value: $ES_PORT
-      # - type: insert-before
-      #   target: workflow
-      #   in:
-      #     - replaced: cwl.input.json
-      #       with: cwl.input.json_
-      #   transitions:
-      #     - name: start-telegraf
-      #       type: shell
-      #       in:
-      #         - place: cwl.input.json
-      #           pattern: _
-      #       out:
-      #         - place: telegraf-cid
-      #           pattern: STDOUT
-      #         - place: cwl.input.json_
-      #           pattern: ~(cwl.input.json)
-      #       command: |
-      #         docker run --rm -d \
-      #           -v /var/run/docker.sock:/var/run/docker.sock \
-      #           -v $EP3_EXT_PATH/cwl-metrics/conf/telegraf.conf:/etc/telegraf/telegraf.conf:ro \
-      #           -v $MEDAL_TMPDIR/log/telegraf:/var/log/telegraf \
-      #           -e TELEGRAF_VERSION=$TELEGRAF_VERSION \
-      #           -e EP3_PID=$EP3_PID \
-      #           telegraf:${TELEGRAF_VERSION}-alpine
-      # - type: add-transitions
-      #   on:
-      #     exit:
-      #       - name: stop-telegraf
-      #         type: shell
-      #         in:
-      #           - place: telegraf-cid
-      #             pattern: _
-      #         command: |
-      #           cid=$(cat ~(tegegraf-cid))
-      #           docker kill $cid
-      #       - name: send-metrics
-      #         type: shell
-      #         in:
-      #           - place: cwl.metrics.json
-      #             pattern: _
-      #         out:
-      #           - place: uuid
-      #             pattern: FILE
-      #         command: |
-      #           uuid=$(uuidgen)
-      #           echo $uuid > ~(uuid)
-      #           curl \
-      #             -H "Content-Type: application/json" \
-      #             -X POST \
-      #             "${ES_HOST}:${ES_PORT}/workflow/_doc/${uuid}?pretty" \
-      #             --data-binary @"~(cwl.metrics.json)"
+      - type: replace-env
+        env:
+          - name: PATH
+            value: $EP3_EXT_PATH/cwl-metrics/bin:~(self)
+          - name: EP3_PID
+            value: $EP3_PID
+          - name: EP3_EXT_PATH
+            value: $EP3_EXT_PATH
+          - name: ES_HOST
+            value: $ES_HOST
+          - name: ES_PORT
+            value: $ES_PORT
+          - name: DOCKER_HOST
+            value: $DOCKER_HOST
+      - type: add-out
+        target: to-fullpath-object
+        out:
+          - place: ready-to-start-telegraf
+            pattern: 1
+
+      - type: add-transitions
+        on:
+          exit:
+            - name: send-metrics
+              type: shell
+              in:
+                - place: cwl.metrics.json
+                  pattern: _
+              out:
+                - place: uuid
+                  pattern: FILE
+              command: |
+                uuid=$(uuidgen)
+                echo $uuid > ~(uuid)
+                curl \
+                  -H "Content-Type: application/json" \
+                  -X POST \
+                  "${ES_HOST}:${ES_PORT}/workflow/_doc/${uuid}?pretty" \
+                  --data-binary @"~(cwl.metrics.json)" > /dev/null
+        transitions:
+          - name: keep-collecting-metrics
+            type: shell
+            in:
+              - place: ready-to-start-telegraf
+                pattern: _
+            out:
+              - place: fluent-bit.log
+                pattern: FILE
+              - place: telegraf.log
+                pattern: STDERR
+            command: |
+              mkdir -p $MEDAL_TMPDIR/metrics
+              fluent-bit -c $EP3_EXT_PATH/cwl-metrics/conf/fluent-bit.conf \
+                --log_file=~(fluent-bit.log)&
+              telegraf_ver=$(telegraf --version | awk '{ print $2}')
+              env TELEGRAF_VERSION=$telegraf_ver \
+                telegraf --config $EP3_EXT_PATH/cwl-metrics/conf/telegraf.conf&
+              wait
       - type: add-out
         target: workflow
         out:
