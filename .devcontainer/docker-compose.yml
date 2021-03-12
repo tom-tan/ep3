@@ -14,6 +14,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - USER_UID=${UID}
+        - USER_GID=${UID}
     environment:
       DOCKER_HOST: tcp://dind:2375/
     working_dir: /workspace/ep3
