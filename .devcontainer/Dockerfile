@@ -10,9 +10,11 @@ RUN apk --no-cache add sudo shadow \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
 
-RUN apk --no-cache add ruby ruby-json ruby-etc nodejs jq docker-cli \
-                       ruby-irb ruby-webrick \
-                       python3 py3-pip git bash curl gnupg
+RUN echo "@testing http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories \
+    && apk --no-cache add ruby ruby-json ruby-etc nodejs jq docker-cli \
+                          ruby-irb ruby-webrick \
+                          python3 py3-pip git bash curl gnupg \
+                          telegraf util-linux fluent-bit@testing
 
 RUN pip3 install cwltest
 
