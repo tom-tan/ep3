@@ -1,13 +1,13 @@
 #!/bin/bash
 
 wait_for_es_to_up() {
-  while [[ -z "$(curl -s localhost:9200)" ]]; do
+  while [[ -z "$(curl -s $ES_HOST:$ES_PORT)" ]]; do
     sleep 5
   done
 }
 
 create_index_metrics() {
-  curl -s --header "Content-Type:application/json" -XPUT localhost:9200/metrics -d '{
+  curl -s --header "Content-Type:application/json" -XPUT $ES_HOST:$ES_PORT/metrics -d '{
     "mappings": {
       "properties": {
         "timestamp": {
@@ -20,7 +20,7 @@ create_index_metrics() {
 }
 
 create_index_workflow() {
-  curl -s --header "Content-Type:application/json" -XPUT localhost:9200/workflow -d '{
+  curl -s --header "Content-Type:application/json" -XPUT $ES_HOST:$ES_PORT/workflow -d '{
     "settings": {
       "index.mapping.total_fields.limit": 5000
     },
