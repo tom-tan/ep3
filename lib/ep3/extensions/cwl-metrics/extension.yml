@@ -217,7 +217,8 @@ hooks:
               - place: cid
                 pattern: ~(cid)
             command: |
-              docker info --format '{{json .}}' | jq '{ running_containers: .ContainersRunning, server_version: .ServerVersion, storage_driver: .Driver, number_of_cpu: .NCPU, total_memory: .MemTotal }' > ~(metrics.runtime.json)
+              mem=$(docker info 2> /dev/null | grep "Total Memory" | awk '{ print $3 }')
+              docker info --format '{{json .}}' | jq "{ running_containers: .ContainersRunning, server_version: .ServerVersion, storage_driver: .Driver, number_of_cpu: .NCPU, total_memory: \"$mem\" }" > ~(metrics.runtime.json)
               cid=$(cat ~(cid))
               docker inspect $cid | jq "{ id: \"$cid\", image: .[0].Config.Image, cmd: .[0].Config.Cmd | join(\" \"), status: .[0].State.Status, start_time: .[0].State.StartedAt, end_time: .[0].State.FinishedAt, exit_code: .[0].State.ExitCode }" > ~(metrics.process.json)
               platform-info-collector > ~(metrics.platform.json)
