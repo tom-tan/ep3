@@ -26,13 +26,17 @@ create_index_workflow() {
     },
     "mappings": {
       "properties": {
-        "start_date": {
-          "type": "date",
-          "format": "yyyy-MM-dd HH:mm:ss"
-        },
-        "end_date": {
-          "type": "date",
-          "format": "yyyy-MM-dd HH:mm:ss"
+        "workflow": {
+          "properties": {
+            "start_date": {
+              "type": "date",
+              "format": "yyyy-MM-dd HH:mm:ss"
+            },
+            "end_date": {
+              "type": "date",
+              "format": "yyyy-MM-dd HH:mm:ss"
+            }
+          }
         }
       }
     }
