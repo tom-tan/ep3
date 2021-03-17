@@ -1,6 +1,11 @@
 id: cwl-metrics
 hooks:
   - target: root
+    precondition:
+      - which telegraf > /dev/null
+      - which fluent-bit > /dev/null
+      - which uuidgen > /dev/null
+      - curl -s $ES_HOST:$ES_PORT > /dev/null
     operations:
       - type: replace-env
         env:
@@ -67,7 +72,9 @@ hooks:
             port-to: cwl.metrics.json
 
   - target: workflow
-    precondition: ./rejectSubWorkflows $target
+    precondition:
+      - ./bin/noSubworkflow ~(target)
+      - ./bin/noScatter ~(target)
     operations:
       - type: replace-env
         env:
@@ -142,7 +149,9 @@ hooks:
                 pattern: STDOUT
 
   - target: tool
-    precondition: ./requireContainer $target
+    precondition:
+      - ./bin/needDockerRequirement ~(target)
+      - which docker > /dev/null
     operations:
       - type: replace-env
         env:
@@ -270,5 +279,6 @@ hooks:
             pattern: _
 
   - target: expression
-    precondition: "false"
+    precondition:
+      - "false"
     operations: []
