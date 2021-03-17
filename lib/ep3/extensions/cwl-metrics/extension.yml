@@ -42,6 +42,7 @@ hooks:
                 uuid=$(uuidgen)
                 echo $uuid > ~(uuid)
                 curl \
+                  -s \
                   -H "Content-Type: application/json" \
                   -X POST \
                   "${ES_HOST}:${ES_PORT}/workflow/_doc/${uuid}?pretty" \
