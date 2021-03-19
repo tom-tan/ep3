@@ -6,6 +6,7 @@ hooks:
       - which fluent-bit > /dev/null
       - which uuidgen > /dev/null
       - curl -s $ES_HOST:$ES_PORT > /dev/null
+      - ./bin/isAWorkflow ~(target)
     operations:
       - type: replace-env
         env:
@@ -24,7 +25,7 @@ hooks:
       - type: add-out
         target: to-fullpath-object
         out:
-          - place: ready-to-start-telegraf
+          - place: ready-to-collect
             pattern: 1
 
       - type: add-transitions
@@ -48,24 +49,40 @@ hooks:
                   "${ES_HOST}:${ES_PORT}/workflow/_doc/${uuid}?pretty" \
                   --data-binary @"~(cwl.metrics.json)" > /dev/null
         transitions:
+          - name: prepare-metrics-directory
+            type: shell
+            in:
+              - place: ready-to-collect
+                pattern: _
+            out:
+              - place: ready-to-start-telegraf
+                pattern: 1
+              - place: ready-to-start-fluent-bit
+                pattern: 1
+            command: mkdir -p $MEDAL_TMPDIR/metrics
           - name: keep-collecting-metrics
             type: shell
             in:
               - place: ready-to-start-telegraf
                 pattern: _
             out:
-              - place: fluent-bit.log
-                pattern: FILE
               - place: telegraf.log
                 pattern: STDERR
             command: |
-              mkdir -p $MEDAL_TMPDIR/metrics
-              fluent-bit -c $EP3_EXT_PATH/cwl-metrics/conf/fluent-bit.conf \
-                --log_file=~(fluent-bit.log)&
               telegraf_ver=$(telegraf --version | awk '{ print $2}')
               env TELEGRAF_VERSION=$telegraf_ver \
-                telegraf --config $EP3_EXT_PATH/cwl-metrics/conf/telegraf.conf&
-              wait
+                telegraf --config $EP3_EXT_PATH/cwl-metrics/conf/telegraf.conf
+          - name: keep-sending-metrics
+            type: shell
+            in:
+              - place: ready-to-start-fluent-bit
+                pattern: _
+            out:
+              - place: fluent-bit.log
+                pattern: FILE
+            command: |
+              fluent-bit -c $EP3_EXT_PATH/cwl-metrics/conf/fluent-bit.conf \
+                --log_file=~(fluent-bit.log)
       - type: add-out
         target: workflow
         out:
