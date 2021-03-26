@@ -35,7 +35,7 @@ def ep3_list(args)
         end
   FileUtils.mkdir_p(dst) if opts.include? 'copy'
 
-  output = open(Dir.glob("#{File.join(dir, 'tmpdir', 'cwl.output.json-*')}").first) { |f|
+  output = open(File.join(dir, 'tmpdir', 'cwl.output.json')) { |f|
     JSON.load(f)
   }.transform_values{ |v|
     InputParameter.parse_object(nil, v, File.join(dir, 'outputs'), {}, {})

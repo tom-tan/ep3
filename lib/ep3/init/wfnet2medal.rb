@@ -37,7 +37,7 @@ def inv2medal(tr)
         %Q|{ place: "#{i.variable}", pattern: "#{i.value}", port-to: #{i.port} }|
     }
     out = tr.out.map{ |o|
-        %Q|{ place: "#{o.from}", port-to: "#{o.to}" }|
+        %Q|{ place: "#{o.variable}", pattern: "#{o.value}" }|
     }
     <<EOT
   - name: #{tr.name}

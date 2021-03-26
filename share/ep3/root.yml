@@ -22,8 +22,8 @@ transitions:
         pattern: _
     out:
       - place: cwl.input.json
-        pattern: STDOUT
-    command: to-fullpath-object job.cwl ~(input.yml)
+        pattern: ~(tr.stdout)
+    command: to-fullpath-object job.cwl ~(in.input.yml)
   - name: workflow
     type: invocation
     use: job.yml
@@ -34,7 +34,16 @@ transitions:
         pattern: _
         port-to: entrypoint
     out:
-      - place: cwl.output.json
-        port-to: cwl.output.json
+      - place: output.json
+        pattern: ~(tr.cwl.output.json)
       - place: ExecutionState
-        port-to: ExecutionState
+        pattern: ~(tr.ExecutionState)
+  - name: to-cwl.output.json
+    type: shell
+    in:
+      - place: output.json
+        pattern: _
+    out:
+      - place: cwl.output.json
+        pattern: ~(tmpdir)/cwl.output.json
+    command: cp ~(in.output.json) $MEDAL_TMPDIR/cwl.output.json
