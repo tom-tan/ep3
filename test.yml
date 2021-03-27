@@ -1,7 +1,19 @@
-- job: examples/inputs.yml
-  tool: examples/workflow.cwl
+- job: examples/simple-workflow/inputs.yml
+  tool: examples/simple-workflow/workflow.cwl
   output:
     output:
       class: File
       basename: output
-  doc: Workflow example
+      checksum: sha1$025886c4f7b345eb3be790c2eb2be02b6fc93da2
+      size: 463
+  doc: Simple workflow
+
+- job: examples/multi-input/inputs.yml
+  tool: examples/multi-input/workflow.cwl
+  output:
+    output:
+      class: File
+      basename: output
+      checksum: sha1$9bf7b32c4b632e041d6e50633da45bf687bfa7b4
+      size: 456
+  doc: Workflow with miltiple input parameters
