@@ -44,10 +44,19 @@ create_index_workflow() {
 }
 
 create_index() {
-  echo "Creating ElasticSearch indexes.."
+  echo 'Creating ElasticSearch indices..'
   wait_for_es_to_up
-  create_index_metrics
-  create_index_workflow
+  
+  msg=$(curl -s -XGET $ES_HOST:$ES_PORT/metrics | jq .metrics)
+  if [ "$msg" = 'null' ]; then
+    create_index_metrics
+    create_index_workflow
+  else
+    echo 'Warning: Indices are already created.'
+    echo '         ES container may store old workflow metrics.'
+    echo '         If you want to initialize ES server, execute the following command:'
+    echo '         curl -XDELETE $ES_HOST:$ES_PORT/* && /workspace/ep3/.devcontainer/setup-es.sh'
+  fi
 }
 
 create_index
