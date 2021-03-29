@@ -197,7 +197,7 @@ hooks:
               pattern: ~(tr.return)
             - place: cid
               pattern: ~(newfile)
-          command: executor --cidfile=~(out.cid) ~(in.CommandGeneration.command)
+          command: executor --name=ep3-${EP3_PID}-~(tag) --cidfile=~(out.cid) ~(in.CommandGeneration.command)
       - type: insert-before
         target: prepare
         in:
