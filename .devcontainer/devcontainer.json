@@ -4,4 +4,5 @@
   "workspaceFolder": "/workspace/ep3",
   "extensions": ["sbg-rabix.benten-cwl", "joaompinto.vscode-graphviz"],
   "postCreateCommand": "./.devcontainer/postCreate.sh",
+  "initializeCommand": "test -e .devcontainer/.env || cp .devcontainer/env.example .devcontainer/.env"
 }
