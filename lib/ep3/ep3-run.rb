@@ -64,7 +64,7 @@ EOS
       env['DOCKER_HOST'] = 'unix:///var/run/docker.sock'
     end
     medal_pid = spawn(env,
-                      "bash", "-o", "pipefail", "-c", "medal workdir/root.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --debug 3>&2 2>&1 1>&3 | tee #{logfile}",
+                      "bash", "-o", "pipefail", "-c", "medal workdir/root.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --verbose 3>&2 2>&1 1>&3 | tee #{logfile}",
                       :chdir => dir, :err => :out, :out => debugout)
 
     _, status = Process.waitpid2 medal_pid

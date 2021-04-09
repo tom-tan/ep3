@@ -87,15 +87,6 @@ class IPort
   end
 end
 
-class OPort
-  attr_reader :from, :to
-
-  def initialize(from, to)
-    @from = from
-    @to = to
-  end
-end
-
 class InvocationTransition
   attr_reader :name, :in, :out, :tag, :tmpdir, :workdir, :use
 
@@ -129,59 +120,6 @@ class PetriNet
     @transitions.map{ |tr|
       tr.to_s
     }.join "\n"
-  end
-
-  def to_dot
-    id = 0
-    edges = @transitions.map{ |tr|
-      dst_set = tr.out.map{ |o|
-        label, dests = case o.value
-                       when 'STDOUT'
-                         ['out', @possible_places.fetch(o.variable, [o])]
-                       when 'STDERR'
-                         ['err', @possible_places.fetch(o.variable, [o])]
-                       when 'RETURN'
-                         ['ret', @possible_places.fetch(o.variable, [o])]
-                       else
-                         if @possible_places.include? o.variable
-                           doms = @possible_places[o.variable].map{ |p| p.value }
-                           if doms.include?('*') and not doms.include?(o.value)
-                             ["=#{o.value}", [Place.new(o.variable, '*')]]
-                           else
-                             [nil, [o]]
-                           end
-                         else
-                           [nil, [o]]
-                         end
-                       end
-        dests.map{ |d|
-          %Q!-> "#{d.to_node}"! +
-            (label.nil? ? ';' : %Q! [ label = "#{label}"];!)
-        }
-      }
-
-      if dst_set.empty?
-        ret = [%Q!  "#{id}" [shape = box];!]+tr.in.map{ |i|
-          %Q!  "#{i.to_node}" -> "#{id}";!
-        }
-        id = id.succ
-      else
-        cmb = dst_set[0].product(*dst_set[1..-1])
-        trs = (id...id+cmb.length).to_a
-        nodes = trs.map{ |i| [%Q!  "#{i}" [shape = box];!] }
-        ret = nodes+trs.zip(cmb).map{ |t, estrs|
-          tr.in.map{ |i| %Q!  "#{i.to_node}" -> "#{t}";! } +
-            estrs.map{ |s| %Q!  "#{t}" #{s}!}
-        }
-        id = id+cmb.length
-      end
-      ret
-    }.flatten
-    <<DOT
-digraph workflow {
-#{edges.join("\n")}
-}
-DOT
   end
 end
 
