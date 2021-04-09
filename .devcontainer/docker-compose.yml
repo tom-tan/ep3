@@ -14,9 +14,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        USER_UID: $UID
-        USER_GID: $UID
+      # args:
+      #   USER_UID: $UID
+      #   USER_GID: $UID
     environment:
       DOCKER_HOST: tcp://dind:2375/
       ES_HOST: es
