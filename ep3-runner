@@ -6,50 +6,77 @@ require 'tmpdir'
 require 'json'
 require 'time'
 
-def run_cmd(cmd, debug)
-  ret = system(cmd)
-  code = $?.exitstatus
-  hash = {
-    'success' => ret,
-    'commmand' => cmd, 'return' => code,
-    'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
-  }
-  if debug
-    warn JSON.dump hash
+Quiet = 0
+Normal = 1
+Verbose = 2
+VeryVerbose = 3
+
+def run_cmd(cmd, loglevel)
+  pid = nil
+  begin
+    pid = spawn(cmd)
+    _, ret = Process.wait2 pid
+    pid = nil
+    # ret = system(cmd)
+    code = ret.exitstatus
+    hash = {
+      'success' => ret.exited?,
+      'commmand' => cmd, 'return' => ret.exitstatus,
+      'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
+    }
+    if loglevel >= Verbose
+      warn JSON.dump hash
+    end
+    hash
+  rescue SignalException
+    hash = {
+      'success' => false,
+      'commmand' => cmd, 'interrupted' => true,
+      'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
+    }
+    if loglevel >= Verbose
+      puts JSON.dump hash
+    end
+    hash
+  rescue => e
+    hash = {
+      'success' => false,
+      'commmand' => cmd, 'message' => e.to_s,
+      'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
+    }
+    if loglevel >= Verbose
+      puts JSON.dump hash
+    end
+    hash
+  ensure
+    unless pid.nil?
+      Process.kill :TERM, pid
+      Process.wait pid
+    end
   end
-  hash
-rescue Interrupt
-  hash = {
-    'success' => false,
-    'commmand' => cmd, 'interrupted' => true,
-    'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
-  }
-  if debug
-    puts JSON.dump hash
-  end
-  hash
-rescue => e
-  hash = {
-    'success' => false,
-    'commmand' => cmd, 'message' => e.to_s,
-    'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
-  }
-  if debug
-    puts JSON.dump hash
-  end
-  hash
 end
 
 if $0 == __FILE__
   extensions = []
+  loglevel = Normal
 
   parser = OptionParser.new
   parser.banner = "Usage: #{$0} cwl [jobfile]"
   parser.on('--tmpdir=TMP', 'directory for temporary files')
   parser.on('--outdir=OUT', 'directory for output objects')
   parser.on('--leave-tmpdir', 'do not remove temporary directory')
-  parser.on('--debug', 'enable debug output')
-  parser.on('--quiet', 'disable information output')
+  parser.on('--quiet', 'disable information output') {
+    loglevel = Quiet
+  }
+  parser.on('--verbose', 'verbose output') {
+    loglevel = Verbose
+  }
+  parser.on('--veryverbose', 'more verbose output') {
+    loglevel = VeryVerbose
+  }
+  parser.on('--debug', 'same as --veryverbose (deprecated)') {
+    loglevel = VeryVerbose
+  }
   parser.on('--extension=EXT', 'specify extension') { |ext|
     extensions.push ext
   }
@@ -80,10 +107,7 @@ if $0 == __FILE__
   outdir = opts.fetch('outdir', '.')
   dst_arg = "--destination=#{outdir}"
 
-  debug = opts.fetch('debug', false)
-  quiet = opts.fetch('quiet', false)
-
-  ret_init = run_cmd("#{basedir}/ep3 init --force #{target_arg} #{cwl} > /dev/null", debug)
+  ret_init = run_cmd("#{basedir}/ep3 init --force #{target_arg} #{cwl} > /dev/null", loglevel)
   unless ret_init['success']
     exit ret_init.fetch('return', 1)
   end
@@ -98,9 +122,13 @@ if $0 == __FILE__
       end
     end
 
-    qopt = quiet ? '--quiet ' : ''
-    dopt = debug ? '--debug ' : ''
-    ret_run = run_cmd("#{basedir}/ep3 run #{qopt}#{dopt}#{target_arg} #{job}", debug)
+    lopt = case loglevel
+           when Quiet       then '--quiet'
+           when Normal      then ''
+           when Verbose     then '--verbose'
+           when VeryVerbose then '--veryverbose'
+           end
+    ret_run = run_cmd("#{basedir}/ep3 run #{lopt} #{target_arg} #{job}", loglevel)
 
     if ret_run.include? 'interrupted'
       exit 1
@@ -108,7 +136,7 @@ if $0 == __FILE__
       exit ret_run.fetch('return', 1)
     end
 
-    ret_list = run_cmd("#{basedir}/ep3 list #{target_arg} --copy #{dst_arg}", debug)
+    ret_list = run_cmd("#{basedir}/ep3 list #{target_arg} --copy #{dst_arg}", loglevel)
     if ret_list['success']
       exit 0
     else

@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+require 'json'
+require 'yaml'
+require 'optparse'
+
+if $0 == __FILE__
+    opt = OptionParser.new
+    opt.banner = "#{$0} [options] <cwl> <inp> <tag>"
+
+    opt.parse!(ARGV)    
+    unless ARGV.length == 3
+        puts opt.help
+        exit
+    end
+
+    cwlfile, inpfile, tag = *ARGV
+
+    unless File.exist? cwlfile
+        raise "File not found: #{cwlfile}"
+    end
+    cwl = YAML.load_file(cwlfile)
+
+    unless File.exist? inpfile
+        raise "File not found: #{inpfile}"
+    end
+    inp = YAML.load_file(inpfile)
+
+    ret = {
+        cwl: cwl,
+        input: inp,
+        tag: tag,
+        message: "Start #{tag.split('.')[2..-1].join('.')}"
+    }
+
+    puts JSON.dump(ret)
+end

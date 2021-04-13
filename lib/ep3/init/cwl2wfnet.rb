@@ -115,6 +115,7 @@ def cmdnet(cwl)
                         out: [Place.new('input.json', "~(in.entrypoint)"),
                               Place.new('StageIn', 'not-started'), Place.new('CommandGeneration', 'not-started'),
                               Place.new('Execution', 'not-started'), Place.new('StageOut', 'not-started')],
+                        preLog: LogEntry.new(command: 'startLog job.cwl ~(in.entrypoint) ~(tag)', level: 'info'),
                         name: 'prepare')
   net << Transition.new(in_: [Place.new('StageIn', 'not-started'), Place.new('input.json', any)],
                         out: [Place.new('StageIn', 'success'),

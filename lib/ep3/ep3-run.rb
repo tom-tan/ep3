@@ -2,12 +2,26 @@
 # coding: utf-8
 require 'optparse'
 
+Quiet = 0
+Normal = 1
+Verbose = 2
+VeryVerbose = 3
+
 def ep3_run(args)
+  loglevel = Normal
+
   parser = OptionParser.new
   parser.banner = "Usage: ep3 run [options] [<inputs.yml or inputs.json>]"
   parser.on('--target-dir=DIR')
-  parser.on('--debug')
-  parser.on('--quiet')
+  parser.on('--quiet', 'disable information output') {
+    loglevel = Quiet
+  }
+  parser.on('--verbose', 'verbose output') {
+    loglevel = Verbose
+  }
+  parser.on('--veryverbose', 'more verbose output') {
+    loglevel = VeryVerbose
+  }
 
   opts = parser.getopts(args)
   unless args.length <= 1
@@ -49,11 +63,14 @@ input.yml: #{File.expand_path(input)}
 EOS
     }
     logfile = 'medal-log.json'
-    debugout = if opts.include?('debug')
-                 :err
-               else
-                 '/dev/null'
-               end
+
+    lopt = case loglevel
+           when Quiet       then '--quiet'
+           when Normal      then '--sys-quiet'
+           when Verbose     then '--app-verbose'
+           when VeryVerbose then '--verbose'
+           end
+
     env = {
       'EP3_LIBPATH' => ENV['EP3_LIBPATH'],
       'EP3_PID' => Process.pid.to_s,
@@ -64,8 +81,8 @@ EOS
       env['DOCKER_HOST'] = 'unix:///var/run/docker.sock'
     end
     medal_pid = spawn(env,
-                      "bash", "-o", "pipefail", "-c", "medal workdir/root.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir --verbose 3>&2 2>&1 1>&3 | tee #{logfile}",
-                      :chdir => dir, :err => :out, :out => debugout)
+                      "bash", "-eo", "pipefail", "-c", "medal workdir/root.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir #{lopt} --log=/dev/stdout | tee #{logfile}",
+                      :chdir => dir, :pgroup => true, :out => :err, :close_others => true)
 
     _, status = Process.waitpid2 medal_pid
     medal_pid = nil
@@ -77,11 +94,14 @@ EOS
   rescue Interrupt
     # nop
     1
+  rescue SignalException
+    # nop
+    1
   ensure
     unless medal_pid.nil?
-      Process.kill :TERM, medal_pid
+      Process.kill :TERM, -medal_pid
+      Process.wait medal_pid
     end
-    Process.waitall
   end
 end
 

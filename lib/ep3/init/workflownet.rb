@@ -58,11 +58,14 @@ end
 class Transition
   attr_reader :name, :in, :out, :command
 
-  def initialize(in_:, out:, command: '', name: nil)
+  def initialize(in_:, out:, command: '', name: nil, preLog: nil, successLog: nil, failureLog: nil)
     @name = name
     @in = in_.sort
     @out = out.sort
     @command = command
+    @preLog = preLog
+    @successLog = successLog
+    @failureLog = failureLog
   end
 
   def to_s
@@ -88,9 +91,9 @@ class IPort
 end
 
 class InvocationTransition
-  attr_reader :name, :in, :out, :tag, :tmpdir, :workdir, :use
+  attr_reader :name, :in, :out, :tag, :tmpdir, :workdir, :use, :preLog, :successLog, :failureLog
 
-  def initialize(in_:, out:, tag:, tmpdir:, workdir:, use:, name: nil)
+  def initialize(in_:, out:, tag:, tmpdir:, workdir:, use:, name: nil, preLog: nil, successLog: nil, failureLog: nil)
     @name = name
     @in = in_
     @use = use
@@ -98,11 +101,24 @@ class InvocationTransition
     @tag = tag
     @tmpdir = tmpdir
     @workdir = workdir
+    @preLog = preLog
+    @successLog = successLog
+    @failureLog = failureLog
+  end
+end
+
+class LogEntry
+  attr_reader :command, :level
+
+  def initialize(command:, level:)
+    @command = command
+    @level = level
   end
 end
 
 class PetriNet
   attr_reader :transitions, :possible_places, :tag, :name, :application
+  attr_accessor :preLog, :successLog, :failureLog
 
   def initialize(name, tag, application)
     @name = name
