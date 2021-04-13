@@ -62,7 +62,6 @@ def ep3_run(args)
 input.yml: #{File.expand_path(input)}
 EOS
     }
-    logfile = 'medal-log.json'
 
     lopt = case loglevel
            when Quiet       then '--quiet'
@@ -80,13 +79,20 @@ EOS
     elsif File.exist?('/var/run/docker.sock')
       env['DOCKER_HOST'] = 'unix:///var/run/docker.sock'
     end
-    medal_pid = spawn(env,
-                      "bash", "-eo", "pipefail", "-c", "medal workdir/root.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir #{lopt} --log=/dev/stdout | tee #{logfile}",
-                      :chdir => dir, :pgroup => true, :out => :err, :close_others => true)
 
-    _, status = Process.waitpid2 medal_pid
-    medal_pid = nil
-    if status.exited?
+    IO.popen("medal workdir/root.yml -i workdir/init.yml --workdir=workdir --tmpdir=tmpdir --leave-tmpdir #{lopt} --log=/dev/stdout", 'r+',
+             :chdir=> dir) { |io|
+      open(File.join(dir, 'medal-log.json'), 'w') do |log|
+        io.each_line { |l|
+          warn l
+          log.puts l
+        }
+      ensure
+        log.flush
+      end
+    }
+    status = Process.last_status
+    if !status.nil? and status.exited?
       status.exitstatus
     else
       1
@@ -97,11 +103,6 @@ EOS
   rescue SignalException
     # nop
     1
-  ensure
-    unless medal_pid.nil?
-      Process.kill :TERM, -medal_pid
-      Process.wait medal_pid
-    end
   end
 end
 

@@ -14,14 +14,11 @@ VeryVerbose = 3
 def run_cmd(cmd, loglevel)
   pid = nil
   begin
-    pid = spawn(cmd)
-    _, ret = Process.wait2 pid
-    pid = nil
-    # ret = system(cmd)
-    code = ret.exitstatus
+    ret = system(cmd)
+    status = $?
     hash = {
-      'success' => ret.exited?,
-      'commmand' => cmd, 'return' => ret.exitstatus,
+      'success' => ret,
+      'commmand' => cmd, 'return' => status.exitstatus,
       'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
     }
     if loglevel >= Verbose
