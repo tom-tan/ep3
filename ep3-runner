@@ -6,10 +6,16 @@ require 'tmpdir'
 require 'json'
 require 'time'
 
+# log levels
 Quiet = 0
 Normal = 1
 Verbose = 2
 VeryVerbose = 3
+
+# keep tmpdir levels
+RemoveAlways = 0
+LeaveOnErrors = 1
+LeaveAlways = 2
 
 def run_cmd(cmd, loglevel)
   pid = nil
@@ -47,7 +53,8 @@ def run_cmd(cmd, loglevel)
     end
     hash = {
       'success' => false,
-      'commmand' => cmd, 'message' => e.to_s,
+      'commmand' => cmd, 'interrupted' => false,
+      'message' => e.to_s,
       'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
     }
     if loglevel >= Verbose
@@ -60,12 +67,30 @@ end
 if $0 == __FILE__
   extensions = []
   loglevel = Normal
+  keep_tmpdir_level = nil
 
   parser = OptionParser.new
   parser.banner = "Usage: #{$0} cwl [jobfile]"
   parser.on('--tmpdir=TMP', 'directory for temporary files')
   parser.on('--outdir=OUT', 'directory for output objects')
-  parser.on('--leave-tmpdir', 'do not remove temporary directory')
+  parser.on('--leave-tmpdir', 'always leave temporary directory') {
+    unless keep_tmpdir_level.nil?
+      raise "Cannot specify --leave-tmpdir, --remove-tmpdir and --leave-tmpdir-on-errors simultaneously"
+    end
+    keep_tmpdir_level = LeaveAlways
+  }
+  parser.on('--leave-tmpdir-on-errors', 'leave temporary directory on errors (default)') {
+    unless keep_tmpdir_level.nil?
+      raise "Cannot specify --leave-tmpdir, --remove-tmpdir and --leave-tmpdir-on-errors simultaneously"
+    end
+    keep_tmpdir_level = LeaveOnErrors
+  }
+  parser.on('--remove-tmpfir', 'always remove temporary directory') {
+    unless keep_tmpdir_level.nil?
+      raise "Cannot specify --leave-tmpdir, --remove-tmpdir and --leave-tmpdir-on-errors simultaneously"
+    end
+    keep_tmpdir_level = RemoveAlways
+  }
   parser.on('--quiet', 'disable information output') {
     loglevel = Quiet
   }
@@ -73,9 +98,6 @@ if $0 == __FILE__
     loglevel = Verbose
   }
   parser.on('--veryverbose', 'more verbose output') {
-    loglevel = VeryVerbose
-  }
-  parser.on('--debug', 'same as --veryverbose (deprecated)') {
     loglevel = VeryVerbose
   }
   parser.on('--extension=EXT', 'specify extension') { |ext|
@@ -94,6 +116,8 @@ if $0 == __FILE__
     exit
   end
 
+  keep_tmpdir_level = keep_tmpdir_level or LeaveOnErrors
+
   cwl = ARGV.shift
   job = if ARGV.empty?
           nil
@@ -102,6 +126,16 @@ if $0 == __FILE__
         end
 
   # Note: Dir.mktmpdir includes side effect
+  if opts.include?('tmpdir') && Dir.exist?(opts['tmpdir'])
+    hash = {
+      'success' => false,
+      'message' => "Directory already exists: #{opts['tmpdir']}",
+      'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
+    }
+    warn JSON.dump hash
+    exit 1
+  end
+
   tmpdir = opts.fetch('tmpdir', Dir.mktmpdir)
   target_arg = "--target-dir=#{tmpdir}"
 
@@ -110,8 +144,13 @@ if $0 == __FILE__
 
   ret_init = run_cmd("#{basedir}/ep3 init --force #{target_arg} #{cwl} > /dev/null", loglevel)
   unless ret_init['success']
+    if Dir.exist?(tmpdir) && keep_tmpdir_level != LeaveAlways
+      FileUtils.remove_entry tmpdir
+    end
     exit ret_init.fetch('return', 1)
   end
+
+  tmpdir_will_be_removed = keep_tmpdir_level == RemoveAlways
 
   begin
     unless extensions.empty?
@@ -139,19 +178,21 @@ if $0 == __FILE__
 
     ret_list = run_cmd("#{basedir}/ep3 list #{target_arg} --copy #{dst_arg}", loglevel)
     if ret_list['success']
+      tmpdir_will_be_removed = true unless keep_tmpdir_level == LeaveAlways
       exit 0
     else
-      exit ret_list.fetch('success', 1)
+      exit ret_list.fetch('return', 1)
     end    
   rescue => e
-    raise e
+    hash = {
+      'success' => false,
+      'message' => "Uncaught exception: #{e}",
+      'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
+    }
+    warn JSON.dump(hash)
+    exit 1
   ensure
-    leave_dir_arg = if opts.include? 'leave-tmpdir'
-                      '--leave-tmpdir '
-                    else
-                      ''
-                    end
-    unless opts.include? 'leave-tmpdir'
+    if tmpdir_will_be_removed
       FileUtils.remove_entry tmpdir
     end
   end
