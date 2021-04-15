@@ -4,6 +4,7 @@ require 'optparse'
 require 'tmpdir'
 require 'fileutils'
 require 'uri'
+require 'yaml'
 require_relative 'init/cwl2wfnet'
 require_relative 'runtime/inspector'
 require_relative 'init/wfnet2medal'
@@ -57,7 +58,7 @@ def ep3_init(args)
     nets = cwl2wfnet(cwl, dst)
     nets.each{ |n|
       open(File.join(n[:destination], 'job.yml'), 'w') { |f|
-        f.puts wfnet2medal(n[:net])
+        f.puts YAML.dump(n[:net].to_h) # wfnet2medal(n[:net])
       }
       if opts.include? 'print-dot'
         open(File.join(n[:destination], 'net.dot'), 'w') { |f|

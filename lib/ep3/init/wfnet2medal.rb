@@ -1,8 +1,9 @@
 #!/usr/bin/env ruby
 require_relative 'workflownet'
+require 'yaml'
 
 def tr2medal(tr)
-    inp = tr.in.map{ |i| 
+    inp = tr.in.map{ |i|
         %Q|{ place: "#{i.variable}", pattern: "#{i.value}" }|
     }
     out = tr.out.map{ |o|

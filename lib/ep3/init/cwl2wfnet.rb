@@ -162,7 +162,7 @@ def cmdnet(cwl)
   }
   unless temporaryFailCodes.empty?
     net << Transition.new(in_: [Place.new('Execution', 'temporaryFailure')], out: [],
-                          command: '"false"',
+                          command: 'false',
                           name: 'fail')
   end
 
@@ -179,7 +179,7 @@ def cmdnet(cwl)
   }
   unless permanentFailCodes.empty?
     net << Transition.new(in_: [Place.new('Execution', 'permanentFailure')], out: [],
-                          command: '"false"',
+                          command: 'false',
                           name: 'fail')
   end
 
@@ -246,7 +246,7 @@ def expnet(cwl)
   }
   unless temporaryFailCodes.empty?
     net << Transition.new(in_: [Place.new('Execution', 'temporaryFailure')], out: [],
-                          command: '"false"',
+                          command: 'false',
                           name: 'fail')
   end
 
@@ -263,7 +263,7 @@ def expnet(cwl)
   }
   unless permanentFailCodes.empty?
     net << Transition.new(in_: [Place.new('Execution', 'permanentFailure')], out: [],
-                          command: '"false"',
+                          command: 'false',
                           name: 'fail')
   end
 
