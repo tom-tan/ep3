@@ -7,14 +7,12 @@ require 'uri'
 require 'yaml'
 require_relative 'init/cwl2wfnet'
 require_relative 'runtime/inspector'
-require_relative 'init/wfnet2medal'
 
 def ep3_init(args)
   parser = OptionParser.new
   parser.banner = "Usage: ep3 init [options] <cwl>"
   parser.on('--target-dir=DIR')
   parser.on('--force')
-  parser.on('--print-dot')
   opts = parser.getopts(args)
 
   unless args.length == 1
@@ -58,13 +56,8 @@ def ep3_init(args)
     nets = cwl2wfnet(cwl, dst)
     nets.each{ |n|
       open(File.join(n[:destination], 'job.yml'), 'w') { |f|
-        f.puts YAML.dump(n[:net].to_h) # wfnet2medal(n[:net])
+        f.puts YAML.dump(n[:net].to_h)
       }
-      if opts.include? 'print-dot'
-        open(File.join(n[:destination], 'net.dot'), 'w') { |f|
-          f.puts n[:net].to_dot
-        }
-      end
     }
     FileUtils.cp(File.join(template_dir, 'root.yml'), dst)
   rescue UnsupportedError => e

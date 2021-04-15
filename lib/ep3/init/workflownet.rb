@@ -10,27 +10,11 @@ class Place
     @value = val
   end
 
-  def to_s
-    if @value.empty?
-      "Place(#{@variable})"
-    else
-      "Place(#{@variable}, #{@value})"
-    end
-  end
-
   def to_h
     {
       'place' => @variable,
       'pattern' => @value,
     }
-  end
-
-  def to_node
-    if @value.empty?
-      "#{@variable}"
-    else
-      "#{@variable}=#{@value}"
-    end
   end
 
   def ==(other)
@@ -73,17 +57,6 @@ class Transition
     @preLog = preLog
     @successLog = successLog
     @failureLog = failureLog
-  end
-
-  def to_s
-    inp = "[#{@in.map{ |i| i.to_s }.join ', '}]"
-    tr = if @command.empty?
-           "->"
-         else
-           "-(#{@command})->"
-         end
-    out = "[#{@out.map{ |o| o.to_s }.join ', '}]"
-    "#{inp} #{tr} #{out}"
   end
 
   def to_h
@@ -181,7 +154,7 @@ class LogEntry
 end
 
 class PetriNet
-  attr_reader :transitions, :possible_places, :tag, :name, :application
+  attr_reader :transitions, :tag, :name, :application
   attr_accessor :preLog, :successLog, :failureLog
 
   def initialize(name, tag, application)
@@ -189,17 +162,10 @@ class PetriNet
     @tag = tag
     @application = application
     @transitions = Set.new
-    @possible_places = Hash.new
   end
 
   def <<(tr)
     @transitions << tr
-  end
-
-  def to_s
-    @transitions.map{ |tr|
-      tr.to_s
-    }.join "\n"
   end
 
   def to_h
