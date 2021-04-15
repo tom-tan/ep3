@@ -12,7 +12,7 @@ if $0 == __FILE__
         exit
     end
 
-    tag = *ARGV
+    tag = ARGV.first
 
 
     ret = {
