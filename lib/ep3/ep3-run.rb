@@ -88,6 +88,9 @@ EOS
           log.puts l
         }
       ensure
+        rest = io.read
+        warn rest
+        log.puts rest
         log.flush
       end
     }
