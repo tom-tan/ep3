@@ -12,11 +12,13 @@ Verbose = 2
 VeryVerbose = 3
 
 def run_cmd(cmd, loglevel)
+  pid = nil
   begin
-    ret = system(cmd)
-    status = $?
+    pid = spawn(cmd)
+    _, status = Process.wait2 pid
+    pid = nil
     hash = {
-      'success' => ret,
+      'success' => status.exited?,
       'commmand' => cmd, 'return' => status.exitstatus,
       'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
     }
@@ -25,23 +27,31 @@ def run_cmd(cmd, loglevel)
     end
     hash
   rescue SignalException
+    unless pid.nil?
+      Process.wait pid
+      pid = nil
+    end
     hash = {
       'success' => false,
       'commmand' => cmd, 'interrupted' => true,
       'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
     }
     if loglevel >= Verbose
-      puts JSON.dump hash
+      warn JSON.dump hash
     end
     hash
   rescue => e
+    unless pid.nil?
+      Process.wait pid
+      pid = nil
+    end
     hash = {
       'success' => false,
       'commmand' => cmd, 'message' => e.to_s,
       'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
     }
     if loglevel >= Verbose
-      puts JSON.dump hash
+      warn JSON.dump hash
     end
     hash
   end
