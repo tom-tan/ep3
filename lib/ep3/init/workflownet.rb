@@ -16,34 +16,6 @@ class Place
       'pattern' => @value,
     }
   end
-
-  def ==(other)
-    other.instance_of?(Place) and
-      other.variable == @variable and
-      other.value == @value
-  end
-
-  def eql?(other)
-    self == other
-  end
-
-  def hash
-    @variable.hash+@value.hash
-  end
-
-  def <=>(other)
-    if @variable == other.variable
-      if @value == '*'
-        1
-      elsif other.value == '*'
-        -1
-      else
-        @value <=> other.value
-      end
-    else
-      @variable <=> other.variable
-    end
-  end
 end
 
 class Transition
@@ -51,8 +23,8 @@ class Transition
 
   def initialize(in_:, out:, command: '', name: nil, preLog: nil, successLog: nil, failureLog: nil)
     @name = name
-    @in = in_.sort
-    @out = out.sort
+    @in = in_
+    @out = out
     @command = command
     @preLog = preLog
     @successLog = successLog
