@@ -1,0 +1,31 @@
+#!/usr/bin/env ruby
+require 'json'
+require 'yaml'
+require 'optparse'
+
+if $0 == __FILE__
+    opt = OptionParser.new
+    opt.banner = "#{$0} [options] <out> <tag>"
+
+    opt.parse!(ARGV)    
+    unless ARGV.length == 2
+        puts opt.help
+        exit
+    end
+
+    outfile, tag = *ARGV
+
+    unless File.exist? outfile
+        raise "File not found: #{outfile}"
+    end
+    out = YAML.load_file(outfile)
+
+    ret = {
+        outputs: out,
+        tag: tag,
+        message: "Finished #{tag.split('.')[2..-1].join('.')}",
+        result: 'success',
+    }
+
+    puts JSON.dump(ret)
+end

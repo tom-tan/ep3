@@ -174,7 +174,21 @@ class PetriNet
           'pattern' => '_',
         },
       ],
-      'transitions' => @transitions.map{ |t| t.to_h }
+      'transitions' => @transitions.map{ |t| t.to_h },
+      'log' => {
+        'pre' => {
+          'level' => 'info',
+          'command' => 'classStartLog job.cwl ~(in.entrypoint) ~(tag)',
+        },
+        'success' => {
+          'level' => 'info',
+          'command' => 'classSuccessLog ~(out.cwl.output.json) ~(tag)',
+        },
+        'failure' => {
+          'level' => 'critical',
+          'command' => 'classFailureLog ~(tag)',
+        }
+      },
     }.compact
   end
 end

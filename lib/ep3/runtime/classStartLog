@@ -7,7 +7,7 @@ if $0 == __FILE__
     opt = OptionParser.new
     opt.banner = "#{$0} [options] <cwl> <inp> <tag>"
 
-    opt.parse!(ARGV)    
+    opt.parse!(ARGV)
     unless ARGV.length == 3
         puts opt.help
         exit
@@ -27,9 +27,9 @@ if $0 == __FILE__
 
     ret = {
         cwl: cwl,
-        input: inp,
+        inputs: inp,
         tag: tag,
-        message: "Start #{tag.split('.')[2..-1].join('.')}"
+        message: "Starting #{tag.split('.')[2..-1].join('.')}"
     }
 
     puts JSON.dump(ret)

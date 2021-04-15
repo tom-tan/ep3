@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+require 'json'
+require 'optparse'
+
+if $0 == __FILE__
+    opt = OptionParser.new
+    opt.banner = "#{$0} [options] <tag>"
+
+    opt.parse!(ARGV)
+    unless ARGV.length == 1
+        puts opt.help
+        exit
+    end
+
+    tag = *ARGV
+
+
+    ret = {
+        tag: tag,
+        message: "Finished #{tag.split('.')[2..-1].join('.')}",
+        result: 'permanentFailure',
+    }
+
+    puts JSON.dump(ret)
+end

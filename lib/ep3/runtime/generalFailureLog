@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+require 'json'
+require 'optparse'
+
+if $0 == __FILE__
+    opt = OptionParser.new
+    opt.banner = "#{$0} [options] <com> <outfile> <errfile> <return> <tag>"
+
+    opt.parse!(ARGV)
+    unless ARGV.length == 5
+        puts opt.help
+        exit
+    end
+
+    com, outfile, errfile, code, tag = *ARGV
+
+    unless File.exist? outfile
+        raise "File not found: #{outfile}"
+    end
+    out = open(outfile).read
+
+    unless File.exist? errfile
+        raise "File not found: #{errfile}"
+    end
+    err = open(errfile).read
+
+    ret = {
+        tag: tag,
+        message: "#{tag.split('.')[2..-1].join('.')} failed in #{com}",
+        stdout: out,
+        stderr: err,
+        return: code.to_i,
+    }
+
+    puts JSON.dump(ret)
+end
