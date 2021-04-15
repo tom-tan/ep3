@@ -12,7 +12,6 @@ Verbose = 2
 VeryVerbose = 3
 
 def run_cmd(cmd, loglevel)
-  pid = nil
   begin
     ret = system(cmd)
     status = $?
@@ -45,11 +44,6 @@ def run_cmd(cmd, loglevel)
       puts JSON.dump hash
     end
     hash
-  ensure
-    unless pid.nil?
-      Process.kill :TERM, pid
-      Process.wait pid
-    end
   end
 end
 
