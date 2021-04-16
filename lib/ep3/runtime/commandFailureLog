@@ -4,15 +4,15 @@ require 'optparse'
 
 if $0 == __FILE__
     opt = OptionParser.new
-    opt.banner = "#{$0} [options] <comfile> <outfile> <errfile> <return> <tag>"
+    opt.banner = "#{$0} [options] <comfile> <outfile> <errfile> <return> <tag> <interrupted>"
 
     opt.parse!(ARGV)
-    unless ARGV.length == 5
+    unless ARGV.length == 6
         puts opt.help
         exit
     end
 
-    comfile, outfile, errfile, code, tag = *ARGV
+    comfile, outfile, errfile, code, tag, interrupted = *ARGV
 
     unless File.exist? comfile
         raise "File not found: #{comfile}"
@@ -29,13 +29,21 @@ if $0 == __FILE__
     end
     err = open(errfile).read(1024)
 
+    level = if interrupted == 'true'
+                'warning'
+            else
+                'error'
+            end
+
     ret = {
-        tag: tag,
-        message: "#{tag.split('.')[2..-1].join('.')} failed in command-execution",
-        command: com,
-        stdout: out,
-        stderr: err,
-        return: code.to_i,
+        'log-level' => level,
+        'interrupted' => interrupted == 'true',
+        'tag' => tag,
+        'message' => "#{tag.split('.')[2..-1].join('.')} failed in command-execution",
+        'command' => com,
+        'stdout' => out,
+        'stderr' => err,
+        'return' => code.to_i,
     }
 
     puts JSON.dump(ret)

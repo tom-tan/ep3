@@ -46,9 +46,9 @@ class Transition
       'out' => @out.map{ |o| o.to_h },
       'command' => cmd,
       'log' => {
-        'pre' => @preLog.to_h,
-        'success' => @successLog.to_h,
-        'failure' => @failureLog.to_h,  
+        'pre' => @preLog,
+        'success' => @successLog,
+        'failure' => @failureLog,
       }.compact,
     }.compact
   end
@@ -101,27 +101,11 @@ class InvocationTransition
       'in' => @in.map{ |i| i.to_h },
       'out' => @out.map{ |o| o.to_h },
       'log' => {
-        'pre' => @preLog.to_h,
-        'success' => @successLog.to_h,
-        'failure' => @failureLog.to_h
-      }.compact
+        'pre' => @preLog,
+        'success' => @successLog,
+        'failure' => @failureLog,
+      }.compact,
     }.compact
-  end
-end
-
-class LogEntry
-  attr_reader :command, :level
-
-  def initialize(command:, level:)
-    @command = command
-    @level = level
-  end
-
-  def to_h
-    {
-      'command' => @command,
-      'level' => @level,
-    }
   end
 end
 
@@ -176,18 +160,9 @@ class PetriNet
       ],
       'transitions' => @transitions.map{ |t| t.to_h },
       'log' => {
-        'pre' => {
-          'level' => 'info',
-          'command' => 'classStartLog job.cwl ~(in.entrypoint) ~(tag)',
-        },
-        'success' => {
-          'level' => 'info',
-          'command' => 'classSuccessLog ~(out.cwl.output.json) ~(tag)',
-        },
-        'failure' => {
-          'level' => 'critical',
-          'command' => 'classFailureLog ~(tag)',
-        }
+        'pre' => 'classStartLog job.cwl ~(in.entrypoint) ~(tag)',
+        'success' => 'classSuccessLog ~(out.cwl.output.json) ~(tag)',
+        'failure' => 'classFailureLog ~(tag) ~(interrupted)',
       },
     }.compact
   end

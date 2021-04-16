@@ -23,13 +23,15 @@ def run_cmd(cmd, loglevel)
     pid = spawn(cmd)
     _, status = Process.wait2 pid
     pid = nil
+    succ = status.exited? && status.exitstatus == 0
+    lv = if succ then 'info' else 'error' end
     hash = {
-      'log-level' => 'info',
-      'success' => status.exited?,
+      'log-level' => lv,
+      'success' => succ,
       'commmand' => cmd, 'return' => status.exitstatus,
       'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
     }
-    if loglevel >= Verbose
+    if lv == 'error' || loglevel >= Verbose
       warn JSON.dump hash
     end
     hash

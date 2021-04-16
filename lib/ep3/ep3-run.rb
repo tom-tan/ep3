@@ -62,8 +62,8 @@ EOS
   }
 
   lopt = case loglevel
-         when Quiet       then '--quiet'
-         when Normal      then '--sys-quiet'
+         when Quiet       then '--sys-silent --app-quiet'
+         when Normal      then '--sys-silent'
          when Verbose     then '--app-verbose'
          when VeryVerbose then '--verbose'
          end
@@ -87,8 +87,10 @@ EOS
       }
     ensure
       rest = io.read
-      warn rest
-      log.puts rest
+      unless rest.empty?
+        warn rest
+        log.puts rest
+      end
       log.flush
     end
   }

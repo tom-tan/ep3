@@ -4,21 +4,28 @@ require 'optparse'
 
 if $0 == __FILE__
     opt = OptionParser.new
-    opt.banner = "#{$0} [options] <tag>"
+    opt.banner = "#{$0} [options] <tag> <interrupted>"
 
     opt.parse!(ARGV)
-    unless ARGV.length == 1
+    unless ARGV.length == 2
         puts opt.help
         exit
     end
 
-    tag = ARGV.first
+    tag, interrupted = *ARGV
 
+    level = if interrupted == 'true'
+                'warning'
+            else
+                'error'
+            end
 
     ret = {
-        tag: tag,
-        message: "Finished #{tag.split('.')[2..-1].join('.')}",
-        result: 'permanentFailure',
+        'log-level' => level,
+        'interrupted' => interrupted == 'true',
+        'tag' => tag,
+        'message' => "Finished #{tag.split('.')[2..-1].join('.')}",
+        'result' => 'permanentFailure',
     }
 
     puts JSON.dump(ret)
