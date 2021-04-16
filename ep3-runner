@@ -154,7 +154,7 @@ if $0 == __FILE__
 
   begin
     unless extensions.empty?
-      ret_hook = run_cmd("#{basedir}/ep3 hook --extensions=#{extensions.join(',')} #{target_arg}", debug)
+      ret_hook = run_cmd("#{basedir}/ep3 hook --extensions=#{extensions.join(',')} #{target_arg}", loglevel)
       if ret_hook.include? 'interrupted'
         exit 1
       elsif not ret_hook['success']
