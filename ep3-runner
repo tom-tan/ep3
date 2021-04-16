@@ -24,6 +24,7 @@ def run_cmd(cmd, loglevel)
     _, status = Process.wait2 pid
     pid = nil
     hash = {
+      'log-level' => 'info',
       'success' => status.exited?,
       'commmand' => cmd, 'return' => status.exitstatus,
       'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
@@ -38,13 +39,12 @@ def run_cmd(cmd, loglevel)
       pid = nil
     end
     hash = {
+      'log-level' => 'error',
       'success' => false,
       'commmand' => cmd, 'interrupted' => true,
       'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
     }
-    if loglevel >= Verbose
-      warn JSON.dump hash
-    end
+    warn JSON.dump hash
     hash
   rescue => e
     unless pid.nil?
@@ -52,14 +52,13 @@ def run_cmd(cmd, loglevel)
       pid = nil
     end
     hash = {
+      'log-level' => 'critical',
       'success' => false,
       'commmand' => cmd, 'interrupted' => false,
       'message' => e.to_s,
       'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
     }
-    if loglevel >= Verbose
-      warn JSON.dump hash
-    end
+    warn JSON.dump hash
     hash
   end
 end
@@ -91,7 +90,7 @@ if $0 == __FILE__
     end
     keep_tmpdir_level = RemoveAlways
   }
-  parser.on('--quiet', 'disable information output') {
+  parser.on('--quiet', 'only print warnings and errors') {
     loglevel = Quiet
   }
   parser.on('--verbose', 'verbose output') {
@@ -128,6 +127,7 @@ if $0 == __FILE__
   # Note: Dir.mktmpdir includes side effect
   if opts.include?('tmpdir') && Dir.exist?(opts['tmpdir'])
     hash = {
+      'log-level' => 'error',
       'success' => false,
       'message' => "Directory already exists: #{opts['tmpdir']}",
       'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
@@ -185,6 +185,7 @@ if $0 == __FILE__
     end    
   rescue => e
     hash = {
+      'log-level' => 'critical',
       'success' => false,
       'message' => "Uncaught exception: #{e}",
       'tag' => 'ep3.system', 'timestamp' => Time.now.iso8601(7),
