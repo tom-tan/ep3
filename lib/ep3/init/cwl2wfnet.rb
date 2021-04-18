@@ -133,7 +133,8 @@ def cmdnet(cwl)
 
   net << Transition.new(in_: [Place.new('Execution', 'not-started'), Place.new('CommandGeneration', 'success'),
                               Place.new('CommandGeneration.command', any)],
-                        out: [Place.new('Execution.return', '~(tr.return)'), Place.new('Execution.out', '~(tr.stdout)'), Place.new('Execution.err', '~(tr.stderr)')],
+                        out: [Place.new('Execution.return', '~(tr.return)'), Place.new('Execution.out', '~(tr.stdout)'), Place.new('Execution.err', '~(tr.stderr)'),
+                              Place.new('CommandGeneration.command', '~(in.CommandGeneration.command)')],
                         command: %Q!executor ~(in.CommandGeneration.command)!,
                         failureLog: 'commandFailureLog ~(in.CommandGeneration.command) ~(tr.stdout) ~(tr.stderr) ~(tr.return) ~(tag) ~(interrupted)',
                         name: 'execute')
@@ -175,7 +176,10 @@ def cmdnet(cwl)
                          [any]
                        end
   permanentFailCodes.each{ |c|
-    net << Transition.new(in_: [Place.new('Execution.return', c.to_s)], out: [Place.new('Execution', 'permanentFailure')],
+    net << Transition.new(in_: [Place.new('Execution.return', c.to_s), Place.new('Execution.out', any), Place.new('Execution.err', any),
+                                Place.new('CommandGeneration.command', any)],
+                          out: [Place.new('Execution', 'permanentFailure')],
+                          preLog: 'permanentFailureLog ~(in.CommandGeneration.command) ~(in.Execution.out) ~(in.Execution.err) ~(in.Execution.return) ~(tag)',
                           name: 'verify-permanentFailure')
   }
   unless permanentFailCodes.empty?

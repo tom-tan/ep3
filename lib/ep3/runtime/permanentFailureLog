@@ -1,0 +1,44 @@
+#!/usr/bin/env ruby
+require 'json'
+require 'optparse'
+
+if $0 == __FILE__
+    opt = OptionParser.new
+    opt.banner = "#{$0} [options] <comfile> <outfile> <errfile> <return> <tag>"
+
+    opt.parse!(ARGV)
+    unless ARGV.length == 5
+        puts opt.help
+        exit
+    end
+
+    comfile, outfile, errfile, code, tag = *ARGV
+
+    unless File.exist? comfile
+        raise "File not found: #{comfile}"
+    end
+    com = open(comfile).read
+
+    unless File.exist? outfile
+        raise "File not found: #{outfile}"
+    end
+    out = open(outfile).read(1024)
+
+    unless File.exist? errfile
+        raise "File not found: #{errfile}"
+    end
+    err = open(errfile).read(1024)
+
+    ret = {
+        'log-level' => 'error',
+        'interrupted' => false,
+        'tag' => tag,
+        'message' => "#{tag.split('.')[2..-1].join('.')} failed in command-execution due to its return code",
+        'command' => com,
+        'stdout' => out,
+        'stderr' => err,
+        'return' => code.to_i,
+    }
+
+    puts JSON.dump(ret)
+end
