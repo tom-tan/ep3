@@ -118,7 +118,7 @@ def cmdnet(cwl)
                         name: 'prepare')
   net << Transition.new(in_: [Place.new('StageIn', 'not-started'), Place.new('input.json', any)],
                         out: [Place.new('StageIn', 'success'),
-                              Place.new('cwl.input.json', '~(tr.stdout)'), Place.new('StageIn.err', '~(tr.stderr)')],
+                              Place.new('cwl.input.json', '~(tr.stdout)')],
                         command: %q!mkdir -p $MEDAL_TMPDIR/outputs; stage-in.rb --outdir=$MEDAL_TMPDIR/outputs job.cwl ~(in.input.json)!,
                         failureLog: 'generalFailureLog stage-in ~(tr.stdout) ~(tr.stderr) ~(tr.return) ~(tag) ~(interrupted)',
                         name: 'stage-in')
@@ -126,8 +126,7 @@ def cmdnet(cwl)
   net << Transition.new(in_: [Place.new('CommandGeneration', 'not-started'), Place.new('StageIn', 'success'),
                               Place.new('cwl.input.json', any)],
                         out: [Place.new('CommandGeneration', 'success'), Place.new('cwl.input.json', '~(in.cwl.input.json)'),
-                              Place.new('CommandGeneration.command', '~(tr.stdout)'),
-                              Place.new('CommandGeneration.err', '~(tr.stderr)')],
+                              Place.new('CommandGeneration.command', '~(tr.stdout)')],
                         command: %Q!inspector.rb job.cwl commandline -i ~(in.cwl.input.json) --outdir=$MEDAL_TMPDIR/outputs!,
                         failureLog: 'generalFailureLog command-generation ~(tr.stdout) ~(tr.stderr) ~(tr.return) ~(tag) ~(interrupted)',
                         name: 'generate-command')
@@ -188,7 +187,7 @@ def cmdnet(cwl)
   net << Transition.new(in_: [Place.new('StageOut', 'not-started'), Place.new('Execution', 'success'),
                               Place.new('cwl.input.json', any)],
                         out: [Place.new('StageOut', 'success'), Place.new('ExecutionState', 'success'),
-                              Place.new('cwl.output.json', '~(tr.stdout)'), Place.new('StageOut.err', '~(tr.stderr)')],
+                              Place.new('cwl.output.json', '~(tr.stdout)')],
                         command: %Q!inspector.rb job.cwl list -i ~(in.cwl.input.json) --json --outdir=$MEDAL_TMPDIR/outputs!,
                         failureLog: 'generalFailureLog stage-out ~(tr.stdout) ~(tr.stderr) ~(tr.return) ~(tag) ~(interrupted)',
                         name: 'stage-out')
@@ -206,23 +205,24 @@ def expnet(cwl)
                         name: 'prepare')
   net << Transition.new(in_: [Place.new('StageIn', 'not-started'), Place.new('input.json', any)],
                         out: [Place.new('StageIn', 'success'),
-                              Place.new('cwl.input.json', '~(tr.stdout)'), Place.new('StageIn.err', '~(tr.stderr)')],
+                              Place.new('cwl.input.json', '~(tr.stdout)')],
                         command: %q!mkdir -p $MEDAL_TMPDIR/outputs; stage-in.rb --outdir=$MEDAL_TMPDIR/outputs job.cwl ~(in.input.json)!,
+                        failureLog: 'generalFailureLog stage-in ~(tr.stdout) ~(tr.stderr) ~(tr.return) ~(tag) ~(interrupted)',
                         name: 'stage-in')
 
   net << Transition.new(in_: [Place.new('CommandGeneration', 'not-started'), Place.new('StageIn', 'success'),
                               Place.new('cwl.input.json', any)],
                         out: [Place.new('CommandGeneration', 'success'), Place.new('cwl.input.json', '~(in.cwl.input.json)'),
-                              Place.new('CommandGeneration.command', '~(tr.stdout)'),
-                              Place.new('CommandGeneration.err', '~(tr.stderr)')],
+                              Place.new('CommandGeneration.command', '~(tr.stdout)')],
                         command: %Q!inspector.rb job.cwl commandline -i ~(in.cwl.input.json) --outdir=$MEDAL_TMPDIR/outputs!,
                         failureLog: 'generalFailureLog command-generation ~(tr.stdout) ~(tr.stderr) ~(tr.return) ~(tag) ~(interrupted)',
                         name: 'generate-command')
 
   net << Transition.new(in_: [Place.new('Execution', 'not-started'), Place.new('CommandGeneration', 'success'),
                               Place.new('CommandGeneration.command', any)],
-                        out: [Place.new('Execution.return', '~(tr.return)'), Place.new('Execution.out', '~(tr.stdout)'), Place.new('Execution.err', '~(tr.stderr)')],
+                        out: [Place.new('Execution.return', '~(tr.return)')],
                         command: %Q!executor ~(in.CommandGeneration.command)!,
+                        failureLog: 'commandFailureLog ~(in.CommandGeneration.command) ~(tr.stdout) ~(tr.stderr) ~(tr.return) ~(tag) ~(interrupted)',
                         name: 'execute')
 
   successCodes = case cwl.class_
@@ -274,7 +274,7 @@ def expnet(cwl)
   net << Transition.new(in_: [Place.new('StageOut', 'not-started'), Place.new('Execution', 'success'),
                               Place.new('cwl.input.json', any)],
                         out: [Place.new('StageOut', 'success'), Place.new('ExecutionState', 'success'),
-                              Place.new('cwl.output.json', '~(tr.stdout)'), Place.new('StageOut.err', '~(tr.stderr)')],
+                              Place.new('cwl.output.json', '~(tr.stdout)')],
                         command: %Q!inspector.rb job.cwl list -i ~(in.cwl.input.json) --json --outdir=$MEDAL_TMPDIR/outputs!,
                         failureLog: 'generalFailureLog stage-out ~(tr.stdout) ~(tr.stderr) ~(tr.return) ~(tag) ~(interrupted)',
                         name: 'stage-out')
