@@ -1,0 +1,82 @@
+id: dynreconf
+hooks:
+  - target: workflow
+    precondition:
+      - ./bin/isAWorkflow ~(target)
+      - ./bin/noSubworkflow ~(target)
+      - ./bin/noScatter ~(target)
+      - curl -s $AS_ENDPOINT
+      - test -f $DYNRECONF_REQ
+    operations:
+      - type: replace-env
+        env:
+          - name: PATH
+            value: $EP3_EXT_PATH/cwl-metrics/bin:~(self)
+          - name: AS_ENDPOINT
+            value: $AS_ENDPOINT
+          - name: REQ_FILE
+            value: DYNRECONF_REQ
+      - type: insert-before
+        target: dup-entrypoint
+        in:
+          - replaced: entrypoint
+            with: entrypoint_
+        transitions:
+          - name: plan
+            type: shell
+            in:
+              - place: entrypoint
+                pattern: _
+            out:
+              - place: entrypoint_
+                pattern: ~(in.entrypoint)
+              - place: /^steps\..+\.plan$/
+                pattern: ~(tr.stdout)
+            command: plan --as-endpoint=$AS_ENDPOINT job.cwl ~(in.entrypoint) $REQ_FILE
+            log:
+              success: planSuccessLog ~(tr.stdout) ~(tag)
+              failure: planFailureLog ~(tr.stdout) ~(tr.stderr) ~(tr.return) ~(tag) ~(interrupted)
+  - target: tool
+    precondition:
+        - ./bin/needDockerRequirement ~(target)
+        - which docker > /dev/null
+    operations:
+      - type: replace-env
+        env:
+          - name: PATH
+            value: $EP3_EXT_PATH/cwl-metrics/bin:~(self)
+          - name: AS_ENDPOINT
+            value: $AS_ENDPOINT
+      - type: add-out
+        target: prepare
+        out:
+          - place: Allocate
+            pattern: not-started
+      - type: add-transitions
+        on:
+          exit:
+            - name: deallocate
+              in:
+                - place: resource
+                  pattern: _
+              command: deallocate --as-endpoint=$AS_ENDPOINT --nowait ~(in.resource)
+              log:
+                success: deallocateSuccessLog ~(tr.stdout) ~(tag)
+                failure: deallocateFailureLog ~(tr.stdout) ~(tr.stderr) ~(tr.return) ~(tag)
+        transitions:
+          - name: allocate
+            type: shell
+            in:
+              - place: Allocate
+                pattern: not-started
+              - place: input.json
+                pattern: _
+            out:
+              - place: Allocate
+                pattern: success
+              - place: input.json
+                pattern: ~(in.input.json)
+            command: allocate --as-endpoint=$AS_ENDPOINT job.cwl ~(in.input.json) ~(in.plan)
+            log:
+              success: allocateSuccessLog ~(tr.stdout) ~(tag)
+              failure: allocateFailureLog ~(tr.stdout) ~(tr.stderr) ~(tr.return) ~(tag) ~(interrupted)
