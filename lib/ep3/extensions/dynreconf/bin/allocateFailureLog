@@ -1,0 +1,44 @@
+#!/usr/bin/env ruby
+require 'json'
+require 'optparse'
+
+if $0 == __FILE__
+    opt = OptionParser.new
+    opt.banner = "#{$0} [options] <out> <err> <code> <tag> <interrupted>"
+
+    opt.parse!(ARGV)
+    unless ARGV.length == 5
+        puts opt.help
+        exit
+    end
+
+    outfile, errfile, code, tag, interrupted = *ARGV
+
+    unless File.exist? outfile
+        raise "File not found: #{outfile}"
+    end
+    out = open(outfile).read
+
+    unless File.exist? errfile
+        raise "File not found: #{errfile}"
+    end
+    err = open(errfile).read
+
+    level = if interrupted == 'true'
+        'warning'
+    else
+        'error'
+    end
+
+    ret = {
+        'log-level' => level,
+        'interrupted' => interrupted == 'true',
+        'tag' => tag,
+        'message' => "Failed to allocate a resource for #{tag.split('.')[2..-1].join('.')}",
+        'stdout' => out,
+        'stderr' => err,
+        'return' => code.to_i,
+    }
+
+    puts JSON.dump(ret)
+end

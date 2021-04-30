@@ -1,0 +1,32 @@
+#!/usr/bin/env ruby
+require 'json'
+require 'optparse'
+
+if $0 == __FILE__
+    opt = OptionParser.new
+    opt.banner = "#{$0} [options] <out> <tag>"
+
+    opt.parse!(ARGV)
+    unless ARGV.length == 2
+        puts opt.help
+        exit
+    end
+
+    outfile, tag = *ARGV
+
+    unless File.exist? outfile
+        raise "File not found: #{outfile}"
+    end
+    out = open(outfile) { |f|
+        JSON.load(f)
+    }
+
+    ret = {
+        'log-level' => 'info',
+        'tag' => tag,
+        'message' => "Succeeded to allocate a resource for #{tag.split('.')[2..-1].join('.')}",
+        'response' => out,
+    }
+
+    puts JSON.dump(ret)
+end

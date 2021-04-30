@@ -171,7 +171,18 @@ if $0 == __FILE__
     })
     exit
   end
-  id = body['req_id']
-  allocated = poll("#{as_server}/status/#{id}", timeout)
-  puts JSON.dump(allocated)
+
+  begin
+    id = body['req_id']
+    allocated = poll("#{as_server}/status/#{id}", timeout)
+    puts JSON.dump(allocated)
+  rescue SignalException
+    puts JSON.dump({
+      messag: 'Terminate allocation due to interruption'
+      invocation_id: invocation_id,
+      reconf_params: ps,
+      post_response: body,
+    })
+    1
+  end
 end

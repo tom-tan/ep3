@@ -53,6 +53,10 @@ def poll(endpoint, timeout)
 end
 
 if $0 == __FILE__
+  # Ensure to send a deallocate request
+  Signal.trap(:INT, 'SIG_IGN')
+  Signal.trap(:TERM, 'SIG_IGN')
+
   options = {
     'as' nil,
   }
