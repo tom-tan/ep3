@@ -11,7 +11,7 @@ hooks:
       - type: replace-env
         env:
           - name: PATH
-            value: $EP3_EXT_PATH/cwl-metrics/bin:~(self)
+            value: $EP3_EXT_PATH/dynreconf/bin:~(self)
           - name: AS_ENDPOINT
             value: $AS_ENDPOINT
           - name: REQUIREMENTS_FILE
@@ -50,7 +50,7 @@ hooks:
       - type: replace-env
         env:
           - name: PATH
-            value: $EP3_EXT_PATH/cwl-metrics/bin:~(self)
+            value: $EP3_EXT_PATH/dynreconf/bin:~(self)
           - name: AS_ENDPOINT
             value: $AS_ENDPOINT
       - type: add-in
