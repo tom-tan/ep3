@@ -67,7 +67,7 @@ hooks:
         on:
           exit:
             - name: deallocate
-              # type: shell
+              type: shell
               in:
                 - place: resource
                   pattern: _
