@@ -110,7 +110,7 @@ def post_request(endpoint, params)
       code: response.code.to_i,
       endpoint: endpoint,
       parameter: params,
-      body: response.body,
+      body: JSON.load(response.body),
     }
     warn JSON.dump(ret)
     raise "Error in post_request"

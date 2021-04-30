@@ -28,7 +28,7 @@ def get_request(endpoint)
       line: __LINE__,
       code: response.code.to_i,
       endpoint: endpoint,
-      body: response.body,
+      body: JSON.load(response.body),
     }
     warn JSON.dump(ret)
     raise "Error in get_request"
