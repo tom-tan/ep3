@@ -63,33 +63,31 @@ def apply(network, exts)
         FileUtils.mv(network, orig)
     end
     ret = system("medal-hook #{orig} #{exts.join(' ')} > #{network}")
-    unless ret
+    code = nil
+    if ret
+        code = $?.exitstatus
+    else
+        code = if ret.nil? then 1 else $?.exitstatus end
         if File.exist?(network) && File.size(network).zero?
             FileUtils.mv(orig, network)
         end
     end
-    ret
+    code
 end
 
 def recursiveApply(network, exts)
     succeeded = apply(network, exts)
-    if succeeded.nil?
-        return 1
-    else
-        return $?.exitstatus
+    unless succeeded.zero?
+        return succeeded
     end
     stepdir = File.join(File.dirname(network), 'steps')
     if Dir.exist?(stepdir)
         Dir.glob("#{stepdir}/*") { |d|
             succeeded = recursiveApply(File.join(d, 'job.yml'), exts)
-            break unless succeeded
+            break unless succeeded.zero?
         }
     end
-    if succeeded.nil?
-        1
-    else
-        $?.exitstatus
-    end
+    succeeded
 end
 
 if $0 == __FILE__
