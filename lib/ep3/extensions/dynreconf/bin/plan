@@ -223,7 +223,7 @@ if $0 == __FILE__
     puts JSON.dump(ret)
   rescue SignalException
     puts JSON.dump({
-      message: 'Terminate making a plan due to interruption'
+      message: 'Terminate making a plan due to interruption',
       invocation_id: invocation_id,
       prepare_params: ps,
       post_response: body,
@@ -231,7 +231,7 @@ if $0 == __FILE__
     1
   rescue => e
     puts JSON.dump({
-      message: 'Unknown error'
+      message: 'Unknown error',
       invocation_id: invocation_id,
       reconf_params: ps,
       post_response: body,
