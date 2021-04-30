@@ -4,7 +4,7 @@ require 'optparse'
 require 'json'
 require 'net/http'
 require 'securerandom'
-require_relative '../runtime/inspector'
+require_relative "#{ENV['EP3_LIBPATH']}/runtime/inspector"
 
 def parse_option_file(file)
   if File.exist? file
