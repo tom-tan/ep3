@@ -6,7 +6,7 @@ hooks:
       - ./bin/noSubworkflow ~(target)
       - ./bin/noScatter ~(target)
       - curl -s $AS_ENDPOINT
-      - test -f $DYNRECONF_REQ
+      - test -f $DYNRECONF_REQUIREMENTS
     operations:
       - type: replace-env
         env:
@@ -14,8 +14,14 @@ hooks:
             value: $EP3_EXT_PATH/cwl-metrics/bin:~(self)
           - name: AS_ENDPOINT
             value: $AS_ENDPOINT
-          - name: REQ_FILE
-            value: DYNRECONF_REQ
+          - name: REQUIREMENTS_FILE
+            value: DYNRECONF_REQUIREMENTS
+      - type: add-in
+        target: /^start-(.+)$/
+        in:
+          - place: steps.~1.invocation-id
+            pattern: _
+            port-to: invocation-id
       - type: insert-before
         target: dup-entrypoint
         in:
@@ -30,9 +36,9 @@ hooks:
             out:
               - place: entrypoint_
                 pattern: ~(in.entrypoint)
-              - place: /^steps\..+\.plan$/
+              - place: /^steps\..+\.invocation-id$/
                 pattern: ~(tr.stdout)
-            command: plan --as-endpoint=$AS_ENDPOINT job.cwl ~(in.entrypoint) $REQ_FILE
+            command: plan --as-endpoint=$AS_ENDPOINT job.cwl ~(in.entrypoint) $REQUIREMENTS_FILE
             log:
               success: planSuccessLog ~(tr.stdout) ~(tag)
               failure: planFailureLog ~(tr.stdout) ~(tr.stderr) ~(tr.return) ~(tag) ~(interrupted)
@@ -47,6 +53,11 @@ hooks:
             value: $EP3_EXT_PATH/cwl-metrics/bin:~(self)
           - name: AS_ENDPOINT
             value: $AS_ENDPOINT
+      - type: add-in
+        target: command-line-tool
+        in:
+          - place: invocation-id
+            pattern: _
       - type: add-out
         target: prepare
         out:
@@ -56,6 +67,7 @@ hooks:
         on:
           exit:
             - name: deallocate
+              # type: shell
               in:
                 - place: resource
                   pattern: _
@@ -71,12 +83,45 @@ hooks:
                 pattern: not-started
               - place: input.json
                 pattern: _
+              - place: invocation-id
+                pattern: _
             out:
               - place: Allocate
                 pattern: success
               - place: input.json
                 pattern: ~(in.input.json)
-            command: allocate --as-endpoint=$AS_ENDPOINT job.cwl ~(in.input.json) ~(in.plan)
+              - place: resource
+                pattern: ~(tr.stdout)
+            command: allocate --as-endpoint=$AS_ENDPOINT job.cwl ~(in.input.json) ~(in.invocation-id)
             log:
               success: allocateSuccessLog ~(tr.stdout) ~(tag)
               failure: allocateFailureLog ~(tr.stdout) ~(tr.stderr) ~(tr.return) ~(tag) ~(interrupted)
+      - type: replace-transition
+        target: execute
+        transition:
+          type: shell
+          in:
+            - place: Execution
+              pattern: not-started
+            - place: CommandGeneration
+              pattern: success
+            - place: CommandGeneration.command
+              pattern: _
+            - place: resource
+              pattern: _
+          out:
+            - place: Execution.return
+              pattern: ~(tr.return)
+            - place: Execution.out
+              pattern: ~(tr.stdout)
+            - place: Execution.err
+              pattern: ~(tr.stderr)
+            - place: CommandGeneration.command
+              pattern: ~(in.CommandGeneration.command)
+            - place: resource
+              pattern: ~(in.resource)
+          command: |
+            RESOURCE=$(jq '.result.endpoint' ~(in.resource))
+            env DOCKER_HOST="$RESOURCE" executor ~(in.CommandGeneration.command)
+          log:
+            failure: commandFailureLog ~(in.CommandGeneration.command) ~(tr.stdout) ~(tr.stderr) ~(tr.return) ~(tag) ~(interrupted)
