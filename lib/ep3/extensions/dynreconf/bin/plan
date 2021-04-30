@@ -17,7 +17,7 @@ def parse_option_file(file)
 end
 
 def cwl_to_galaxy_params(id, cwl_file)
-    cwl = CommonWorkflowLanguage.load_file(File.join('steps', id, 'cwl', 'job.cwl'))
+    cwl = CommonWorkflowLanguage.load_file(File.join('steps', id, 'job.cwl'))
     container = get_requirement(cwl, 'DockerRequirement').dockerPull
     container_name = if container.include? ':'
                         container.split(':')[0]
