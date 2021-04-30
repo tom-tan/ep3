@@ -21,7 +21,18 @@ def get_request(endpoint)
   headers = { 'Content-Type' => 'application/json' }
   response = http.get(uri.path, headers)
 
-  raise "Error in `#{endpoint}`: #{response.body}" if response.code != '201'
+  if response.code != '201'
+    ret = {
+      message: 'Error in get_request',
+      file: __FILE__,
+      line: __LINE__,
+      code: response.code.to_i,
+      endpoint: endpoint,
+      body: response.body,
+    }
+    warn JSON.dump(ret)
+    raise "Error in get_request"
+  end
 
   JSON.load(response.body)
   # {

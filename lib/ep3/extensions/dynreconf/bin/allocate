@@ -39,7 +39,19 @@ def post_request(endpoint, params)
   headers = { 'Content-Type' => 'application/json' }
   response = http.post(uri.path, JSON.dump(params), headers)
 
-  raise "Error in creation: #{response.body}" if response.code != '201'
+  if response.code != '201'
+    ret = {
+      message: 'Error in post_request',
+      file: __FILE__,
+      line: __LINE__,
+      code: response.code.to_i,
+      endpoint: endpoint,
+      parameter: params,
+      body: response.body,
+    }
+    warn JSON.dump(ret)
+    raise "Error in post_request"
+  end
 
   JSON.load(response.body)
   # {
@@ -178,10 +190,19 @@ if $0 == __FILE__
     puts JSON.dump(allocated)
   rescue SignalException
     puts JSON.dump({
-      messag: 'Terminate allocation due to interruption'
+      message: 'Terminate allocation due to interruption'
       invocation_id: invocation_id,
       reconf_params: ps,
       post_response: body,
+    })
+    1
+  rescue => e
+    puts JSON.dump({
+      message: 'Unknown error'
+      invocation_id: invocation_id,
+      reconf_params: ps,
+      post_response: body,
+      exception: e.full_message,
     })
     1
   end
