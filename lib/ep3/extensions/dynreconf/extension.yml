@@ -10,12 +10,14 @@ hooks:
     operations:
       - type: replace-env
         env:
+          - name: EP3_LIBPATH
+            value: $EP3_LIBPATH
           - name: PATH
             value: $EP3_EXT_PATH/dynreconf/bin:~(self)
           - name: AS_ENDPOINT
             value: $AS_ENDPOINT
           - name: REQUIREMENTS_FILE
-            value: DYNRECONF_REQUIREMENTS
+            value: $DYNRECONF_REQUIREMENTS
       - type: add-in
         target: /^start-(.+)$/
         in:
@@ -49,6 +51,8 @@ hooks:
     operations:
       - type: replace-env
         env:
+          - name: EP3_LIBPATH
+            value: $EP3_LIBPATH
           - name: PATH
             value: $EP3_EXT_PATH/dynreconf/bin:~(self)
           - name: AS_ENDPOINT
