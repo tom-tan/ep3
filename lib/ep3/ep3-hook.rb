@@ -45,8 +45,16 @@ def ep3_hook(args)
 
     extArgs = extFiles.map{ |e| "--hook=#{e}" }
 
-    apply(File.join(dir, 'workdir', 'root.yml'), extArgs)
-    recursiveApply(File.join(dir, 'workdir', 'job.yml'), extArgs)
+    ret = apply(File.join(dir, 'workdir', 'root.yml'), extArgs)
+    if ret
+        ret = recursiveApply(File.join(dir, 'workdir', 'job.yml'), extArgs)
+    end
+
+    if ret.nil?
+        1
+    else
+        $?.exitstatus
+    end
 end
 
 def apply(network, exts)
@@ -54,12 +62,22 @@ def apply(network, exts)
     unless File.exist?(orig)
         FileUtils.mv(network, orig)
     end
-    system("medal-hook #{orig} #{exts.join(' ')} > #{network}")
+    ret = system("medal-hook #{orig} #{exts.join(' ')} > #{network}")
+    unless ret
+        if File.exist?(network) && File.size(network).zero?
+            FileUtils.mv(orig, network)
+        end
+    end
+    ret
 end
 
 def recursiveApply(network, exts)
     succeeded = apply(network, exts)
-    return 1 unless succeeded
+    if succeeded.nil?
+        return 1
+    else
+        return $?.exitstatus
+    end
     stepdir = File.join(File.dirname(network), 'steps')
     if Dir.exist?(stepdir)
         Dir.glob("#{stepdir}/*") { |d|
@@ -67,10 +85,10 @@ def recursiveApply(network, exts)
             break unless succeeded
         }
     end
-    if succeeded
-        0
-    else
+    if succeeded.nil?
         1
+    else
+        $?.exitstatus
     end
 end
 
