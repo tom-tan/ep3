@@ -177,6 +177,7 @@ def plan_main(args)
                     code: code,
                     endpoint: endpoint,
                     body: res,
+                    prepare_params: ps,
                 })
             end
         end

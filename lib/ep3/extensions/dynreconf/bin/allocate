@@ -148,6 +148,7 @@ def allocate_main(args)
           code: code,
           endpoint: endpoint,
           body: res,
+          reconf_params: ps,
         })
       end
     end
