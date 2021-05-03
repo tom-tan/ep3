@@ -382,24 +382,35 @@ def wfnet(cwl)
     else
       s.in.each{ |p|
         default = p.default
-        p.source.each_with_index{ |s_, idx|
-          if s_.match %r|^(.+)/(.+)$|
-            prev = $1
-            prevParam = $2
-          else
-            prev = nil
-            prevParam = s_
-          end
-          outConnections[prev].push step
+        if p.source.empty?
+          outConnections[nil].push step
           inConnections[step].push({
-            prevStep: prev,
+            prevStep: nil,
             nextParam: p.id,
-            prevParam: prevParam,
-            index: if p.source.length == 1 then nil else idx end,
-            linkMerge: p.linkMerge,
+            prevParam: nil,
+            index: nil,
             default: default,
-          })
-        }
+          })  
+        else
+          p.source.each_with_index{ |s_, idx|
+            if s_.match %r|^(.+)/(.+)$|
+              prev = $1
+              prevParam = $2
+            else
+              prev = nil
+              prevParam = s_
+            end
+            outConnections[prev].push step
+            inConnections[step].push({
+              prevStep: prev,
+              nextParam: p.id,
+              prevParam: prevParam,
+              index: if p.source.length == 1 then nil else idx end,
+              linkMerge: p.linkMerge,
+              default: default,
+            })
+          }
+        end
       }
     end
   }
@@ -445,7 +456,7 @@ def wfnet(cwl)
               end
     trOut = nexts.map{ |n|
       "#{prev}2#{n}"
-    }
+    }.uniq
     cmds = nil
     reqPlaces = []
     if prev.nil?
@@ -510,7 +521,7 @@ def wfnet(cwl)
       %Q!#{param}: #{val}!
     }
 
-    trInPlaces = trIn.map{ |t| Place.new(t, any) }
+    trInPlaces = trIn.uniq.map{ |t| Place.new(t, any) }
     trOutPlaces = [Place.new(trOut, '~(tr.stdout)')]
     if trOut == 'cwl.output.json'
       trInPlaces.push *cwl.steps.map{ |s| Place.new("#{s.id}-ExecutionState", 'success') }
