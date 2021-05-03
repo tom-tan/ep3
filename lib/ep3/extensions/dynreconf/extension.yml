@@ -63,6 +63,11 @@ hooks:
         in:
           - place: invocation-id
             pattern: _
+      - type: add-in
+        target: stage-in
+        in:
+          - place: Allocate
+            pattern: success
       - type: add-out
         target: prepare
         out:
