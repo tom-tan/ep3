@@ -190,7 +190,7 @@ def plan_main(args)
             0
         else
             raise JSON.dump({
-                message: 'Timeout to make a plan'
+                message: 'Timeout to make a plan',
                 invocation_id: invocation_id,
                 prepare_params: ps,
                 post_response: body,
