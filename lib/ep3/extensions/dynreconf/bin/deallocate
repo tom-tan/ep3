@@ -2,125 +2,124 @@
 # coding: utf-8
 require 'optparse'
 require 'json'
-require 'net/http'
+require_relative '../lib/rest'
 require_relative "#{ENV['EP3_LIBPATH']}/runtime/inspector"
 
 def parse_option_file(file)
-  if File.exist? file
-    open(file) { |f|
-      JSON.load(f)
-    }
-  else
-    {}
-  end
-end
-
-def get_request(endpoint)
-  uri = URI.parse(endpoint)
-  http = Net::HTTP.new(uri.host, uri.port)
-  headers = { 'Content-Type' => 'application/json' }
-  response = http.get(uri.path, headers)
-
-  if response.code != '201'
-    ret = {
-      message: 'Error in get_request',
-      file: __FILE__,
-      line: __LINE__,
-      code: response.code.to_i,
-      endpoint: endpoint,
-      body: JSON.load(response.body),
-    }
-    warn JSON.dump(ret)
-    raise "Error in get_request"
-  end
-
-  JSON.load(response.body)
-  # {
-  #   delete_id: del-xxx,
-  #   request_id: xxx,
-  #   done: false
-  # }
-end
-
-def poll(endpoint, timeout)
-  uri = URI.parse(endpoint)
-  http = Net::HTTP.new(uri.host, uri.port)
-  headers = { 'Content-Type' => 'application/json' }
-  start = Time.now
-  json = nil
-  (timeout/10.0).ceil.times{
-    response = http.get(uri, headers)
-    json = JSON.load(response.body)
-    if response.code == '200'
-      break if json['done']
+    if File.exist? file
+        open(file) { |f|
+            JSON.load(f)
+        }
     else
-      warn "Warning: code: #{response.code}, body: #{JSON.dump(response.body)}"
+        {}
+    end
+end
+
+def deallocate_main(args)    
+    options = { 'as': nil, }
+    timeout = 10*60 # 10 min.
+    nowait = false
+    opt_file = '.reconf.json'
+    opt = OptionParser.new
+    opt.banner = "Usage: #{File.basename $0} [options] resource"
+    # common options
+    # res-id: A resource ID
+    opt.on('--timeout=TO', "Timeout in seconds (default: #{timeout} sec.)") do |to|
+        timeout = to.to_i
+    end
+    opt.on('--config=FILE',
+           "A file name for configuration params such as as and ms endpoints (default: #{opt_file})") do |f|
+        unless File.exist? f
+            warn "File not found: #{f}"
+            exit 1
+        end
+        opt_file = f
     end
 
-    break if Time.now-start > timeout
-    sleep 10
-  }
-  json
+    # reconf deallocator specific options
+    opt.on('--as-endpoint=AS', 'An endpoint to an application scheduler') do |as|
+        options['as'] = as
+    end
+    opt.on('--nowait', 'Post parameters and immediately exit') do
+        nowait = true
+    end
+
+    opt.parse!(args)
+    unless args.length == 1
+        puts opt.help
+        return 0
+    end
+
+    res = ARGV.first
+    raise "File not found: #{res}" unless File.exist? res
+
+    options = parse_option_file(opt_file).merge(options)
+    as_server = options['as']
+
+    id = open(res) { |f|
+        JSON.load(f)
+    }['result']['resource_req_id']
+
+    body = get_request("#{as_server}/delete/#{id}")
+    if nowait
+        puts JSON.dump(body)
+        return 0
+    end
+
+    begin
+        id = body['delete_id']
+        endpoint = "#{as_server}/delete_status/#{id}"
+        deleted = poll(endpoint, timeout) do |code, res|
+            if code == 200
+                break(res) if res['done']
+            else
+                raise JSON.dump({
+                    message: 'Error in poll',
+                    file: __FILE__,
+                    line: __LINE__,
+                    code: code,
+                    endpoint: endpoint,
+                    body: res,
+                })
+            end
+        end
+
+        if deleted
+            puts JSON.dump(deleted)
+            0
+        else
+            raise JSON.dump({
+                message: 'Timeout to deallocate a resource',
+                resource_id: id,
+                get_response: body,
+            })
+        end
+    rescue SignalException
+        raise JSON.dump({
+            message: 'Terminate deallocating a resource due to interruption',
+            resource_id: id,
+            get_response: body,
+        })
+    end
 end
 
 if $0 == __FILE__
-  # Ensure to send a deallocate request
-  Signal.trap(:INT, 'SIG_IGN')
-  Signal.trap(:TERM, 'SIG_IGN')
-
-  options = {
-    'as' nil,
-  }
-  timeout = 10*60 # 10 min.
-  nowait = false
-  opt_file = '.reconf.json'
-  opt = OptionParser.new
-  opt.banner = "Usage: #{$0} [options] resource"
-  # common options
-  # res-id: A resource ID
-  opt.on('--timeout=TO', "Timeout in seconds (default: #{timeout} sec.)") { |to|
-    timeout = to.to_i
-  }
-  opt.on('--config=FILE',
-         "A file name for configuration params such as as and ms endpoints (default: #{opt_file})") { |f|
-    unless File.exist? f
-      warn "File not found: #{f}"
-      exit 1
+    # Ensure to send a deallocate request
+    Signal.trap(:INT, 'SIG_IGN')
+    Signal.trap(:TERM, 'SIG_IGN')
+    begin
+        exit deallocate_main(ARGV)
+    rescue => e
+        json = nil
+        begin
+            json = JSON.load(e.message)
+        rescue JSON::ParserError
+            json = {
+                message: "Unknown error",
+                exception: e.full_message(highlight: false),
+            }
+        end
+        warn JSON.dump(json)
+        exit 1
     end
-    opt_file = f
-  }
-
-  # reconf deallocator specific options
-  opt.on('--as-endpoint=AS', 'An endpoint to an application scheduler') { |as|
-    options['as'] = as
-  }
-  opt.on('--nowait', 'Post parameters and immediately exit') {
-    nowait = true
-  }
-
-  opt.parse!(ARGV)
-  unless ARGV.length == 1
-    puts opt.help
-    exit
-  end
-
-  res = ARGV.first
-  raise "File not found: #{res}" unless File.exist? res
-
-  options = parse_option_file(opt_file).merge(options)
-  as_server = options['as']
-
-  id = open(res) { |f|
-    JSON.load(f)
-  }['result']['resource_req_id']
-
-  body = get_request("#{as_server}/delete/#{id}")
-  if nowait
-    puts JSON.dump(body)
-    exit
-  end
-
-  id = body['delete_id']
-  deleted = poll("#{as_server}/delete_status/#{id}", timeout)
-  puts JSON.dump(deleted)
 end

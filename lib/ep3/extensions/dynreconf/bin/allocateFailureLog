@@ -22,7 +22,17 @@ if $0 == __FILE__
     unless File.exist? errfile
         raise "File not found: #{errfile}"
     end
-    err = open(errfile).read
+    err = open(errfile) do |f|
+        str = f.read
+        begin
+            JSON.load(str)
+        rescue JSON::ParserError
+            {
+                message: "Unknown error",
+                payload: str,
+            }
+        end
+    end
 
     level = if interrupted == 'true'
         'warning'

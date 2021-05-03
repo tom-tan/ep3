@@ -2,7 +2,7 @@
 # coding: utf-8
 require 'optparse'
 require 'json'
-require 'net/http'
+require_relative '../lib/rest'
 require_relative "#{ENV['EP3_LIBPATH']}/runtime/inspector"
 
 def parse_option_file(file)
@@ -33,57 +33,8 @@ def to_reconf_params(cwl_file, params_file, id)
   }
 end
 
-def post_request(endpoint, params)
-  uri = URI.parse(endpoint)
-  http = Net::HTTP.new(uri.host, uri.port)
-  headers = { 'Content-Type' => 'application/json' }
-  response = http.post(uri.path, JSON.dump(params), headers)
-
-  if response.code != '201'
-    ret = {
-      message: 'Error in post_request',
-      file: __FILE__,
-      line: __LINE__,
-      code: response.code.to_i,
-      endpoint: endpoint,
-      parameter: params,
-      body: JSON.load(response.body),
-    }
-    warn JSON.dump(ret)
-    raise "Error in post_request"
-  end
-
-  JSON.load(response.body)
-  # {
-  #   req_id: xxx
-  # }
-end
-
-def poll(endpoint, timeout)
-  uri = URI.parse(endpoint)
-  http = Net::HTTP.new(uri.host, uri.port)
-  headers = { 'Content-Type' => 'application/json' }
-  start = Time.now
-  json = nil
-  (timeout/10.0).ceil.times{
-    response = http.get(uri, headers)
-    json = JSON.load(response.body)
-    if response.code == '200'
-      break if json['done'] and json['data']['success']
-    else
-      warn "Warning: code: #{response.code}, body: #{JSON.dump(response.body)}"
-    end
-
-    unless json['data']['success']
-      warn "Error: request failed"
-      break
-    end
-
-    break if Time.now-start > timeout
-    sleep 10
-  }
-  json['data']['result']['i1']
-#  body = {
+# Poll example for /status/$req_id
+#  {
 #    "done": true,
 #    "data": {
 #      "type": "reconf",
@@ -110,9 +61,8 @@ def poll(endpoint, timeout)
 #      }
 #    }
 #  }
-end
 
-if $0 == __FILE__
+def allocate_main(args)
   options = {
     'as': nil,
   }
@@ -121,7 +71,7 @@ if $0 == __FILE__
   nowait = false
   opt_file = '.reconf.json'
   opt = OptionParser.new
-  opt.banner = "Usage: #{$0} [options] cwl params plan-result"
+  opt.banner = "Usage: #{File.basename $0} [options] cwl params plan-result"
   # common options
   # cwl: A file name for tool definition
   # params: A file name for input parameters
@@ -149,13 +99,13 @@ if $0 == __FILE__
     options['as'] = as
   }
 
-  opt.parse!(ARGV)
-  unless ARGV.length == 3
+  opt.parse!(args)
+  unless args.length == 3
     puts opt.help
-    exit
+    return 0
   end
 
-  cwl, params, plan = *ARGV
+  cwl, params, plan = *args
 
   raise "File not found: #{cwl}" unless File.exist? cwl
   raise "File not found: #{params}" unless File.exist? params
@@ -171,7 +121,7 @@ if $0 == __FILE__
   ps = to_reconf_params(cwl, params, invocation_id)
   if dry_run
     puts JSON.dump(ps)
-    exit
+    return 0
   end
 
   body = post_request("#{as_server}/reconf", ps)
@@ -181,29 +131,62 @@ if $0 == __FILE__
       reconf_params: ps,
       post_response: body,
     })
-    exit
+    return 0
   end
 
   begin
     id = body['req_id']
-    allocated = poll("#{as_server}/status/#{id}", timeout)
-    puts JSON.dump(allocated)
+    endpoint = "#{as_server}/status/#{id}"
+    allocated = poll(endpoint, timeout) do |code, res|
+      if code == 200 && res['done'] && res['data']['success']
+        break(res['data']['result']['i1'])
+      elsif code != 200 || (res['done'] && not(res['data']['success']))
+        raise JSON.dump({
+          message: 'Error in poll',
+          file: __FILE__,
+          line: __LINE__,
+          code: code,
+          endpoint: endpoint,
+          body: res,
+        })
+      end
+    end
+
+    if allocated
+      puts JSON.dump(allocated)
+      0
+    else
+      raise JSON.dump({
+        message: 'Timeout to allocate a resource',
+        invocation_id: invocation_id,
+        reconf_params: ps,
+        post_response: body,
+      })
+    end
   rescue SignalException
-    puts JSON.dump({
+    raise JSON.dump({
       message: 'Terminate allocation due to interruption',
       invocation_id: invocation_id,
       reconf_params: ps,
       post_response: body,
     })
-    1
+  end
+end
+
+if $0 == __FILE__
+  begin
+      exit allocate_main(ARGV)
   rescue => e
-    puts JSON.dump({
-      message: 'Unknown error',
-      invocation_id: invocation_id,
-      reconf_params: ps,
-      post_response: body,
-      exception: e.full_message,
-    })
-    1
+      json = nil
+      begin
+          json = JSON.load(e.message)
+      rescue JSON::ParserError
+          json = {
+              message: "Unknown error",
+              exception: e.full_message(highlight: false),
+          }
+      end
+      warn JSON.dump(json)
+      exit 1
   end
 end
