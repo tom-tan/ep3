@@ -68,7 +68,7 @@ def to_prepare_params(cwl_file, params_file, reqs_file, id)
         JSON.load(f)
     }
     {
-        workflow_name: cwl_file,
+        workflow_name: walk(cwl, '.id', cwl_file),
         as_objoctives: reqs,
         workflow_invocation_id: id,
         workflow_body: {
