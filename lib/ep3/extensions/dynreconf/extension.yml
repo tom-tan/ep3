@@ -2,9 +2,10 @@ id: dynreconf
 hooks:
   - target: workflow
     precondition:
-      - ./bin/isAWorkflow ~(target)
-      - ./bin/noSubworkflow ~(target)
-      - ./bin/noScatter ~(target)
+      - ./pre/isAWorkflow ~(target)
+      - ./pre/noSubworkflow ~(target)
+      - ./pre/noScatter ~(target)
+      - which curl 2> /dev/null
       - curl -s $AS_ENDPOINT
       - test -f $DYNRECONF_REQUIREMENTS
     operations:
@@ -46,7 +47,7 @@ hooks:
               failure: planFailureLog ~(tr.stdout) ~(tr.stderr) ~(tr.return) ~(tag) ~(interrupted)
   - target: tool
     precondition:
-        - ./bin/needDockerRequirement ~(target)
+        - ./pre/needDockerRequirement ~(target)
         - which docker > /dev/null
     operations:
       - type: replace-env
