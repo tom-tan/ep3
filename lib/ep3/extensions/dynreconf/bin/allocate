@@ -20,14 +20,22 @@ def to_reconf_params(cwl_file, params_file, id)
   params = open(params_file) { |f|
     JSON.load(f)
   }
+  container = get_requirement(cwl, 'DockerRequirement').dockerPull
+  cname = container.match(%r|^(.+/)?(.+?)(:.+)?$|)[2]
+  # workaround for as_dyn
+  uuid = {
+    "hisat2" => "3891409b-ed59-4b66-8cb5-ce8fbc85bf6a",
+    "cufflinks" => "e08b1784-20ec-44a5-915f-f847cb9cef77",
+    "stringtie" => "7118fc9d-6a5a-46d8-bb2b-f82856144f77",    
+  }.fetch(cname, nil)
   {
     input_params: Hash[params.keep_if{ |k, v|
       v.instance_of?(Hash) and v.fetch('class', '') == 'File'
     }.map{ |k, v|
       [k, v['size']/(1024.0**3)]
     }],
-    tool_id: get_requirement(cwl, 'DockerRequirement').dockerPull,
-    next_step_uuid: nil,
+    tool_id: container,
+    next_step_uuid: uuid,
     workflow_name: 'job.cwl',
     workflow_invocation_id: id,
   }
