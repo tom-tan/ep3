@@ -131,7 +131,7 @@ hooks:
             - place: resource
               pattern: ~(in.resource)
           command: |
-            RESOURCE=$(jq '.result.endpoint' ~(in.resource))
+            RESOURCE=$(jq -r '.result.endpoint' ~(in.resource))
             env DOCKER_HOST="$RESOURCE" executor ~(in.CommandGeneration.command)
           log:
             failure: commandFailureLog ~(in.CommandGeneration.command) ~(tr.stdout) ~(tr.stderr) ~(tr.return) ~(tag) ~(interrupted)
