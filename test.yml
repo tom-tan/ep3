@@ -4,8 +4,8 @@
     output:
       class: File
       basename: output
-      checksum: sha1$025886c4f7b345eb3be790c2eb2be02b6fc93da2
-      size: 463
+      checksum: sha1$c28e458d4e943c743b9b3c46fdab10688a6d68b6
+      size: 687
   doc: Simple workflow
 
 - job: examples/multi-input/inputs.yml
