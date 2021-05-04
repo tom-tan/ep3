@@ -7,7 +7,7 @@ def get_request(endpoint)
     headers = { 'Content-Type' => 'application/json' }
     response = http.get(uri.path, headers)
   
-    if response.code != '201'
+    if response.code != '200'
       ret = {
         message: 'Error in get_request',
         file: __FILE__,
