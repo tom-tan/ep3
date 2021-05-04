@@ -6,7 +6,7 @@ hooks:
       - which fluent-bit > /dev/null
       - which uuidgen > /dev/null
       - curl -s $ES_HOST:$ES_PORT > /dev/null
-      - ./bin/isAWorkflow ~(target)
+      - ./pre/isAWorkflow ~(target)
     operations:
       - type: replace-env
         env:
@@ -91,8 +91,8 @@ hooks:
 
   - target: workflow
     precondition:
-      - ./bin/noSubworkflow ~(target)
-      - ./bin/noScatter ~(target)
+      - ./pre/noSubworkflow ~(target)
+      - ./pre/noScatter ~(target)
     operations:
       - type: replace-env
         env:
@@ -168,7 +168,7 @@ hooks:
 
   - target: tool
     precondition:
-      - ./bin/needDockerRequirement ~(target)
+      - ./pre/needDockerRequirement ~(target)
       - which docker > /dev/null
     operations:
       - type: replace-env
