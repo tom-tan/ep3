@@ -141,6 +141,8 @@ hooks:
                 pattern: ~(tr.stdout)
             command: |
               jq '. + { stepname: "~1" }' ~0
+      - type: add-transitions
+        transitions:
           - name: generate-metrics
             type: shell
             in:
