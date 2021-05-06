@@ -2,8 +2,8 @@ FROM alpine:3.13.4
 
 LABEL maintainer="Tomoya Tanjo <ttanjo@gmail.com>"
 
-ARG medal_ver=v1.2.0
-ARG medal_hook_ver=v1.0.1
+ARG medal_ver=v1.3.0
+ARG medal_hook_ver=v1.1.0
 
 RUN echo "@testing http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
     apk --no-cache add ruby ruby-json ruby-etc nodejs jq docker-cli \
