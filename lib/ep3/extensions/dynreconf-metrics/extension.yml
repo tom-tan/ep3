@@ -33,6 +33,8 @@ hooks:
               out:
                 - place: uuid
                   pattern: ~(newfile)
+                - place: es_response
+                  pattern: ~(newfile)
               command: |
                 uuid=$(uuidgen)
                 echo $uuid > ~(out.uuid)
@@ -41,7 +43,11 @@ hooks:
                   -H "Content-Type: application/json" \
                   -X POST \
                   "${ES_HOST}:${ES_PORT}/workflow/_doc/${uuid}?pretty" \
-                  --data-binary @"~(in.cwl.metrics.json)"
+                  --data-binary @"~(in.cwl.metrics.json)" > ~(out.es_response)
+                result=$(jq .result ~(out.es_response))
+                test "$result" = 'created'
+              log:
+                failure: sendMetricsFailureLog ~(tr.newfile.es_response) ~(tr.stderr) ~(tag) ~(interrupted)
       - type: add-out
         target: workflow
         out:
