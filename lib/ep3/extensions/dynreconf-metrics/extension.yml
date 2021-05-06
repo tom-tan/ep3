@@ -39,7 +39,7 @@ hooks:
                   -H "Content-Type: application/json" \
                   -X POST \
                   "${ES_HOST}:${ES_PORT}/workflow/_doc/${uuid}?pretty" \
-                  --data-binary @"~(in.cwl.metrics.json)" > /dev/null
+                  --data-binary @"~(in.cwl.metrics.json)"
       - type: add-out
         target: workflow
         out:
@@ -74,7 +74,7 @@ hooks:
               - place: entrypoint__
                 pattern: ~(in.entrypoint)
             command: |
-              date +'%Y-%m-%d %H:%M:%S' > ~(out.start_date)
+              date +'%Y-%m-%dT%H:%M:%S' > ~(out.start_date)
               cat ~(in.entrypoint) > ~(out.metrics.input.json)
       - type: add-out
         target: workflow
@@ -113,7 +113,7 @@ hooks:
                 pattern: _
             command: |
               start_date=$(cat ~(in.start_date))
-              end_date=$(date +'%Y-%m-%d %H:%M:%S')
+              end_date=$(date +'%Y-%m-%dT%H:%M:%S')
               step_metrics=$(echo "~@" | tr ' ' ',')
               ep3-log-generator --class=Workflow --cwl=job.cwl \
                 --start="$start_date" --end="$end_date" \
@@ -186,7 +186,7 @@ hooks:
               - place: entrypoint_
                 pattern: ~(in.entrypoint)
             command: |
-              date +'%Y-%m-%d %H:%M:%S' > ~(out.start_date)
+              date +'%Y-%m-%dT%H:%M:%S' > ~(out.start_date)
               cat ~(in.entrypoint) > ~(out.metrics.input.json)
       - type: insert-before
         target: stage-out
@@ -243,7 +243,7 @@ hooks:
                 pattern: _
             command: |
               start_date=$(cat ~(in.start_date))
-              end_date=$(date +'%Y-%m-%d %H:%M:%S')
+              end_date=$(date +'%Y-%m-%dT%H:%M:%S')
               ep3-log-generator --class=CommandLineTool --cwl=job.cwl \
                 --start="$start_date" --end="$end_date" \
                 --input=~(in.metrics.input.json) --output=~(in.cwl.output.json) \
