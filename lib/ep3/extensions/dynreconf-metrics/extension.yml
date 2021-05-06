@@ -1,0 +1,267 @@
+id: dynreconf-metrics
+hooks:
+  - target: root
+    precondition:
+      - which uuidgen > /dev/null
+      - curl -s $ES_HOST:$ES_PORT > /dev/null
+      - ./pre/isAWorkflow ~(target)
+    operations:
+      - type: replace-env
+        env:
+          - name: PATH
+            value: $EP3_EXT_PATH/dynreconf-metrics/bin:~(self)
+          - name: EP3_PID
+            value: $EP3_PID
+          - name: EP3_EXT_PATH
+            value: $EP3_EXT_PATH
+          - name: ES_HOST
+            value: $ES_HOST
+          - name: ES_PORT
+            value: $ES_PORT
+          - name: DOCKER_HOST
+            value: $DOCKER_HOST
+      - type: add-transitions
+        on:
+          exit:
+            - name: send-metrics
+              type: shell
+              in:
+                - place: cwl.metrics.json
+                  pattern: _
+              out:
+                - place: uuid
+                  pattern: ~(newfile)
+              command: |
+                uuid=$(uuidgen)
+                echo $uuid > ~(out.uuid)
+                curl \
+                  -s \
+                  -H "Content-Type: application/json" \
+                  -X POST \
+                  "${ES_HOST}:${ES_PORT}/workflow/_doc/${uuid}?pretty" \
+                  --data-binary @"~(in.cwl.metrics.json)" > /dev/null
+      - type: add-out
+        target: workflow
+        out:
+          - place: cwl.metrics.json
+            pattern: ~(tr.cwl.metrics.json)
+
+  - target: workflow
+    precondition:
+      - ./pre/noSubworkflow ~(target)
+      - ./pre/noScatter ~(target)
+    operations:
+      - type: replace-env
+        env:
+          - name: PATH
+            value: $EP3_EXT_PATH/dynreconf-metrics/bin:~(self)
+      - type: insert-before
+        target: plan
+        in:
+          - replaced: entrypoint
+            with: entrypoint__
+        transitions:
+          - name: metrics-init
+            type: shell
+            in:
+              - place: entrypoint
+                pattern: _
+            out:
+              - place: start_date
+                pattern: ~(newfile)
+              - place: metrics.input.json
+                pattern: ~(newfile)
+              - place: entrypoint__
+                pattern: ~(in.entrypoint)
+            command: |
+              date +'%Y-%m-%d %H:%M:%S' > ~(out.start_date)
+              cat ~(in.entrypoint) > ~(out.metrics.input.json)
+      - type: add-out
+        target: workflow
+        out:
+          - place: cwl.metrics.json
+            pattern: _
+      - type: add-out
+        target: /^start-(.+)$/
+        out:
+          - place: steps.~1.metrics.json_
+            pattern: ~(tr.cwl.metrics.json)
+      - type: add-transitions
+        transitions:
+          - name: add-~1-step-name
+            type: shell
+            in:
+              - place: /^steps\.(.+)\.metrics\.json_/
+                pattern: _
+            out:
+              - place: steps.~1.metrics.json
+                pattern: ~(tr.stdout)
+            command: |
+              jq '. + { stepname: "~1" }' ~0
+      - type: add-transitions
+        transitions:
+          - name: generate-metrics
+            type: shell
+            in:
+              - place: metrics.input.json
+                pattern: _
+              - place: cwl.output.json
+                pattern: _
+              - place: /^steps\..+\.metrics\.json$/g
+                pattern: _
+              - place: start_date
+                pattern: _
+            command: |
+              start_date=$(cat ~(in.start_date))
+              end_date=$(date +'%Y-%m-%d %H:%M:%S')
+              step_metrics=$(echo "~@" | tr ' ' ',')
+              ep3-log-generator --class=Workflow --cwl=job.cwl \
+                --start="$start_date" --end="$end_date" \
+                --input=~(in.metrics.input.json) --output=~(in.cwl.output.json) \
+                --step-metrics=$step_metrics
+            out:
+              - place: cwl.output.json
+                pattern: ~(in.cwl.output.json)
+              - place: cwl.metrics.json
+                pattern: ~(tr.stdout)
+
+  - target: tool
+    precondition:
+      - ./pre/needDockerRequirement ~(target)
+      - which docker > /dev/null
+    operations:
+      - type: replace-env
+        env:
+          - name: PATH
+            value: $EP3_EXT_PATH/dynreconf-metrics/bin:~(self)
+          - name: EP3_PID
+            value: $EP3_PID
+      - type: replace-transition
+        target: execute
+        transition:
+          type: shell
+          in:
+            - place: Execution
+              pattern: not-started
+            - place: CommandGeneration
+              pattern: success
+            - place: CommandGeneration.command
+              pattern: _
+            - place: resource
+              pattern: _
+          out:
+            - place: Execution.return
+              pattern: ~(tr.return)
+            - place: Execution.out
+              pattern: ~(tr.stdout)
+            - place: Execution.err
+              pattern: ~(tr.stderr)
+            - place: CommandGeneration.command
+              pattern: ~(in.CommandGeneration.command)
+            - place: resource
+              pattern: ~(in.resource)
+            - place: cid
+              pattern: ~(newfile)
+          command: |
+            RESOURCE=$(jq -r '.result.endpoint' ~(in.resource))
+            env DOCKER_HOST="$RESOURCE" executor --name=ep3-${EP3_PID}-~(tag) --cidfile=~(out.cid) ~(in.CommandGeneration.command)
+          log:
+            failure: commandFailureLog ~(in.CommandGeneration.command) ~(tr.stdout) ~(tr.stderr) ~(tr.return) ~(tag) ~(interrupted)
+      - type: insert-before
+        target: prepare
+        in:
+          - replaced: entrypoint
+            with: entrypoint_
+        transitions:
+          - name: start-metrics
+            type: shell
+            in:
+              - place: entrypoint
+                pattern: _
+            out:
+              - place: start_date
+                pattern: ~(newfile)
+              - place: metrics.input.json
+                pattern: ~(newfile)
+              - place: entrypoint_
+                pattern: ~(in.entrypoint)
+            command: |
+              date +'%Y-%m-%d %H:%M:%S' > ~(out.start_date)
+              cat ~(in.entrypoint) > ~(out.metrics.input.json)
+      - type: insert-before
+        target: stage-out
+        in:
+          - replaced: cwl.input.json
+            with: cwl.input.json_
+        transitions:
+          - name: collect-container-info
+            type: shell
+            in:
+              - place: cwl.input.json
+                pattern: _
+              - place: resource
+                pattern: _
+              - place: cid
+                pattern: _
+            out:
+              - place: metrics.runtime.json
+                pattern: ~(newfile)
+              - place: metrics.platform.json
+                pattern: ~(newfile)
+              - place: metrics.process.json
+                pattern: ~(newfile)
+              - place: cwl.input.json_
+                pattern: ~(in.cwl.input.json)
+              - place: resource
+                pattern: ~(in.resource)
+              - place: cid
+                pattern: ~(in.cid)
+            command: |
+              RESOURCE=$(jq -r '.result.endpoint' ~(in.resource))
+              export DOCKER_HOST="$RESOURCE"
+              mem=$(docker info 2> /dev/null | grep "Total Memory" | awk '{ print $3 }')
+              docker info --format '{{json .}}' | jq "{ running_containers: .ContainersRunning, server_version: .ServerVersion, storage_driver: .Driver, number_of_cpu: .NCPU, total_memory: \"$mem\" }" > ~(out.metrics.runtime.json)
+              cid=$(cat ~(in.cid))
+              docker inspect $cid | jq "{ id: \"$cid\", image: .[0].Config.Image, cmd: .[0].Config.Cmd | join(\" \"), status: .[0].State.Status, start_time: .[0].State.StartedAt, end_time: .[0].State.FinishedAt, exit_code: .[0].State.ExitCode }" > ~(out.metrics.process.json)
+              platform-info-collector ~(in.resource) > ~(out.metrics.platform.json)
+      - type: add-transitions
+        transitions:
+          - name: generate-metrics
+            type: shell
+            in:
+              - place: start_date
+                pattern: _
+              - place: metrics.input.json
+                pattern: _
+              - place: metrics.platform.json
+                pattern: _
+              - place: metrics.runtime.json
+                pattern: _
+              - place: metrics.process.json
+                pattern: _
+              - place: cwl.output.json
+                pattern: _
+            command: |
+              start_date=$(cat ~(in.start_date))
+              end_date=$(date +'%Y-%m-%d %H:%M:%S')
+              ep3-log-generator --class=CommandLineTool --cwl=job.cwl \
+                --start="$start_date" --end="$end_date" \
+                --input=~(in.metrics.input.json) --output=~(in.cwl.output.json) \
+                --platform=~(in.metrics.platform.json) \
+                --runtime=~(in.metrics.runtime.json) \
+                --process=~(in.metrics.process.json)
+            out:
+              - place: cwl.output.json
+                pattern: ~(in.cwl.output.json)
+              - place: cwl.metrics.json
+                pattern: ~(tr.stdout)
+      - type: add-out
+        target: command-line-tool
+        out:
+          - place: cwl.metrics.json
+            pattern: _
+
+  - target: expression
+    precondition:
+      - "false"
+    operations: []

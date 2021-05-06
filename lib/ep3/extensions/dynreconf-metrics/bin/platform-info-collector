@@ -1,0 +1,35 @@
+#!/usr/bin/env ruby
+require 'optparse'
+require 'json'
+
+if $0 == __FILE__
+    opt = OptionParser.new
+    opt.banner = "Usage: #{$0} [options] resource-info"
+
+    opt.parse!(ARGV)
+
+    unless ARGV.length == 1
+        puts opt.help
+        exit
+    end
+
+    res_file = ARGV.first
+    raise "File not found: #{res_file}" unless File.exist?(res_file)
+
+    resource = open(res_file) do |f|
+      JSON.load(f)['properties']
+    end
+
+    platform = {
+        hostname: nil,
+        ncpu_cores: resource['ncores'],
+        total_memory: resource['memory']*1024**3, # byte
+        disk_size: resource['storage']*1024**2, # KiB
+    }
+    if resource['provider'] == 'aws'
+      platform['ec2_ami_id'] = nil
+      platform['ec2_instance_type'] = resource['flavor']
+      platform['ec2_region'] = resource['region']
+    end
+    puts JSON.dump(platform)
+end

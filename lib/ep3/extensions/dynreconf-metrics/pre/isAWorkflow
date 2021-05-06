@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+require 'optparse'
+require_relative "#{ENV['EP3_LIBPATH']}/runtime/inspector"
+
+if $0 == __FILE__
+    opt = OptionParser.new
+    opt.banner = "#{$0} [options] <root.yml>"
+    opt.parse!(ARGV)
+
+    unless ARGV.length == 1
+        puts opt.help
+        exit
+    end
+
+    dir = File.dirname(ARGV.first)
+    cwl = File.join(dir, 'job.cwl')
+
+    unless walk(cwl, '.class', '') == 'Workflow'
+        puts 'It only supports a simple workflow'
+        exit 1
+    end
+end

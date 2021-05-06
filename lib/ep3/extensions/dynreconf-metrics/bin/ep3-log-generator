@@ -1,0 +1,153 @@
+#!/usr/bin/env ruby
+require 'optparse'
+require 'json'
+
+def jobinfo(docClass, cwl,
+            start_date, end_date,
+            input, output,
+            platform, runtime, process)
+    {
+        start_date: start_date,
+        end_date: end_date,
+        cwl_file: 'job.cwl',
+        tool_status: 'success',
+        inputs: open(input) { |f|
+            JSON.load(f)
+        },
+        outputs: open(output) { |f|
+            JSON.load(f)
+        },
+        container: {
+            process: open(process) { |f|
+                JSON.load(f)
+            },
+            runtime: open(runtime) { |f|
+                JSON.load(f)
+            },
+        },
+        platform: open(platform) { |f|
+            JSON.load(f)
+        },
+    }
+end
+
+def workflowinfo(docClass, cwl,
+                 start_date, end_date,
+                 input, output,
+                 step_metrics)
+    {
+        cwl_metrics_version: '0.1.18',
+        metrics_generator: {
+            name: 'ep3-log-generator',
+            version: '0.0'
+        },
+        workflow: {
+            start_date: start_date,
+            end_date: end_date,
+            cwl_file: 'job.cwl',
+            genome_version: nil,
+            inputs: open(input) { |f|
+                JSON.load(f)
+            },
+            outputs: open(output) { |f|
+                JSON.load(f)
+            },
+        },
+        steps: Hash[
+            step_metrics.map{ |f|
+                sm = open(f) { |ff|
+                    JSON.load(ff)
+                }
+                [sm['stepname'], sm]
+            }
+        ]
+    }
+end
+
+if $0 == __FILE__
+    docClass = nil
+    cwl = nil
+    start_date = nil
+    end_date = nil
+    input = nil
+    output = nil
+    platform = nil
+    runtime = nil
+    process = nil
+    step_metrics = nil
+
+    opt = OptionParser.new
+    opt.banner = "Usage: #{$0} [options]"
+    opt.on('--class=docClass') { |c|
+        docClass = c
+    }
+    opt.on('--cwl=CWL') { |c|
+        unless File.exist?(c)
+            raise "File not found: #{c}"
+        end
+        cwl = c
+    }
+    opt.on('--start=S') { |s|
+        start_date = s
+    }
+    opt.on('--end=E') { |e|
+        end_date = e
+    }
+    opt.on('--input=input.json') { |inp|
+        unless File.exist?(inp)
+            raise "File not found: #{inp}"
+        end
+        input = inp
+    }
+    opt.on('--output=output.json') { |out|
+        unless File.exist?(out)
+            raise "File not found: #{out}"
+        end
+        output = out
+    }
+    opt.on('--platform=platform.json') { |pl|
+        unless File.exist?(pl)
+            raise "File not found: #{pl}"
+        end
+        platform = pl
+    }
+    opt.on('--runtime=runtime.json') { |rt|
+        unless File.exist?(rt)
+            raise "File not found: #{rt}"
+        end
+        runtime = rt
+    }
+    opt.on('--process=process.json') { |pr|
+        unless File.exist?(pr)
+            raise "File not found: #{pr}"
+        end
+        process = pr
+    }
+    opt.on('--step-metrics=step.metrics.json') { |ss|
+        step_metrics = ss.split(',')
+    }
+    opt.parse!(ARGV)
+
+    unless ARGV.empty?
+        puts opt.help
+        exit
+    end
+
+    metrics = case docClass
+              when 'CommandLineTool'
+                jobinfo(docClass, cwl,
+                        start_date, end_date,
+                        input, output,
+                        platform, runtime, process)
+              when 'Workflow'
+                workflowinfo(docClass, cwl,
+                             start_date, end_date,
+                             input, output,
+                             step_metrics)
+              when 'ExpressionTool'
+                raise "Unsupported document class: #{docClass}"
+              else
+                raise "Unsupported document class: #{docClass}"            
+              end
+    puts JSON.dump(metrics)
+end
