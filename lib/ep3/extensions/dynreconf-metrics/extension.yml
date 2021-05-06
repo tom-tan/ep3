@@ -44,7 +44,7 @@ hooks:
                   -X POST \
                   "${ES_HOST}:${ES_PORT}/workflow/_doc/${uuid}?pretty" \
                   --data-binary @"~(in.cwl.metrics.json)" > ~(out.es_response)
-                result=$(jq .result ~(out.es_response))
+                result=$(jq -r .result ~(out.es_response))
                 test "$result" = 'created'
               log:
                 failure: sendMetricsFailureLog ~(tr.newfile.es_response) ~(tr.stderr) ~(tag) ~(interrupted)
