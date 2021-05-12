@@ -67,6 +67,7 @@ end
 
 if $0 == __FILE__
   extensions = []
+  compute_checksum = true
   loglevel = Normal
   keep_tmpdir_level = nil
 
@@ -100,6 +101,9 @@ if $0 == __FILE__
   }
   parser.on('--veryverbose', 'more verbose output') {
     loglevel = VeryVerbose
+  }
+  parser.on('--[no-]compute-checksum', 'compute (or do not compute) checksum of contents (default: --compute-checksum)') { |cs|
+    compute_checksum = cs
   }
   parser.on('--extension=EXT', 'specify extension') { |ext|
     extensions.push ext
@@ -178,7 +182,13 @@ if $0 == __FILE__
       exit ret_run.fetch('return', 1)
     end
 
-    ret_list = run_cmd("#{basedir}/ep3 list #{target_arg} --copy #{dst_arg}", loglevel)
+    copt = if compute_checksum
+              '--compute-checksum'
+           else
+              '--no-compute-checksum'
+           end
+
+    ret_list = run_cmd("#{basedir}/ep3 list #{target_arg} #{copt} --copy #{dst_arg}", loglevel)
     if ret_list['success']
       tmpdir_will_be_removed = true unless keep_tmpdir_level == LeaveAlways
       exit 0

@@ -7,11 +7,15 @@ require_relative 'runtime/inspector'
 require_relative 'runtime/stage-in'
 
 def ep3_list(args)
+  compute_checksum = true
   parser = OptionParser.new
   parser.banner = "Usage: ep3 list [options]"
   parser.on('--target-dir=DIR')
   parser.on('--copy')
   parser.on('--destination=DST')
+  parser.on('--[no-]compute-checksum') { |cs|
+    compute_checksum = cs
+  }
 
   opts = parser.getopts(args)
   unless args.empty?
@@ -44,7 +48,7 @@ def ep3_list(args)
     v.nil?
   }
   puts JSON.dump(stagein(to_be_skipped, {}, output, dst,
-                         opts.include?('copy')))
+                         opts.include?('copy'), compute_checksum))
   0
 end
 

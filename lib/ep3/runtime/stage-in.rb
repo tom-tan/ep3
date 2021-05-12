@@ -7,19 +7,19 @@ require 'optparse'
 require 'securerandom'
 require_relative 'inspector'
 
-def stagein(to_be_skipped, staged_inputs, job, outdir, force_stagein = false)
+def stagein(to_be_skipped, staged_inputs, job, outdir, force_stagein = false, compute_checksum = false)
   Hash[job.each.map{ |k, v|
          if to_be_skipped.call(k, v)
            nil
          elsif staged_inputs.include?(k)
            [k, staged_inputs[k].to_h]
          else
-           [k, stagein_(v, outdir, force_stagein).to_h]
+           [k, stagein_(v, outdir, force_stagein, compute_checksum).to_h]
          end
        }.compact]
 end
 
-def stagein_(obj, outdir, force_stagein = false)
+def stagein_(obj, outdir, force_stagein = false, compute_checksum = false)
   case obj
   when CWLFile
     if force_stagein or need_staging(obj)
@@ -38,9 +38,9 @@ def stagein_(obj, outdir, force_stagein = false)
                  end
       ret.location = 'file://'+ret.path
       ret.secondaryFiles = obj.secondaryFiles.map{ |sec|
-        stagein_(sec, outdir, true)
+        stagein_(sec, outdir, true, compute_checksum)
       }
-      ret.evaluate(nil)
+      ret.evaluate(nil, false, compute_checksum)
     else
       obj
     end
@@ -52,21 +52,21 @@ def stagein_(obj, outdir, force_stagein = false)
       ret.location = 'file://'+ret.path
       FileUtils.mkdir_p ret.path
       ret.listing = obj.listing.map{ |lst|
-        stagein_(lst, ret.path, true)
+        stagein_(lst, ret.path, true, compute_checksum)
       }
-      ret.evaluate(nil)
+      ret.evaluate(nil, false, compute_checksum)
     else
       obj
     end
   when CWLRecordValue
     obj.fields.transform_values{ |v|
-      stagein_(v, outdir, force_stagein).to_h
+      stagein_(v, outdir, force_stagein, compute_checksum).to_h
     }
   when CWLUnionValue
-    stagein_(obj.value, outdir, force_stagein)
+    stagein_(obj.value, outdir, force_stagein, compute_checksum)
   when Array
     obj.map{ |o|
-      stagein_(o, outdir, force_stagein).to_h
+      stagein_(o, outdir, force_stagein, compute_checksum).to_h
     }
   else
     obj
