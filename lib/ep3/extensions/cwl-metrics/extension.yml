@@ -123,7 +123,7 @@ hooks:
               - place: entrypoint_
                 pattern: ~(in.entrypoint)
             command: |
-              date +'%Y-%m-%d %H:%M:%S' > ~(out.start_date)
+              date -Iseconds | tr ',' '.' > ~(out.start_date)
               cat ~(in.entrypoint) > ~(out.metrics.input.json)
       - type: add-out
         target: workflow
@@ -162,7 +162,7 @@ hooks:
                 pattern: _
             command: |
               start_date=$(cat ~(in.start_date))
-              end_date=$(date +'%Y-%m-%d %H:%M:%S')
+              end_date=$(date -Iseconds | tr ',' '.')
               step_metrics=$(echo "~@" | tr ' ' ',')
               ep3-log-generator --class=Workflow --cwl=job.cwl \
                 --start="$start_date" --end="$end_date" \
@@ -225,7 +225,7 @@ hooks:
               - place: entrypoint_
                 pattern: ~(in.entrypoint)
             command: |
-              date +'%Y-%m-%d %H:%M:%S' > ~(out.start_date)
+              date -Iseconds | tr ',' '.' > ~(out.start_date)
               cat ~(in.entrypoint) > ~(out.metrics.input.json)
       - type: insert-before
         target: stage-out
@@ -252,8 +252,7 @@ hooks:
               - place: cid
                 pattern: ~(in.cid)
             command: |
-              mem=$(docker info | grep "Total Memory" | awk '{ print $3 }')
-              docker info --format '{{json .}}' | jq "{ running_containers: .ContainersRunning, server_version: .ServerVersion, storage_driver: .Driver, number_of_cpu: .NCPU, total_memory: \"$mem\" }" > ~(out.metrics.runtime.json)
+              docker info --format '{{json .}}' | jq "{ running_containers: .ContainersRunning, server_version: .ServerVersion, storage_driver: .Driver, number_of_cpu: .NCPU, total_memory: .MemTotal }" > ~(out.metrics.runtime.json)
               cid=$(cat ~(in.cid))
               docker inspect $cid | jq "{ id: \"$cid\", image: .[0].Config.Image, cmd: .[0].Config.Cmd | join(\" \"), status: .[0].State.Status, start_time: .[0].State.StartedAt, end_time: .[0].State.FinishedAt, exit_code: .[0].State.ExitCode }" > ~(out.metrics.process.json)
               platform-info-collector > ~(out.metrics.platform.json)
@@ -286,7 +285,7 @@ hooks:
                 pattern: _
             command: |
               start_date=$(cat ~(in.start_date))
-              end_date=$(date +'%Y-%m-%d %H:%M:%S')
+              end_date=$(date -Iseconds | tr ',' '.')
               ep3-log-generator --class=CommandLineTool --cwl=job.cwl \
                 --start="$start_date" --end="$end_date" \
                 --input=~(in.metrics.input.json) --output=~(in.cwl.output.json) \

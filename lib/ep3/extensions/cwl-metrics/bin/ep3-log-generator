@@ -36,10 +36,10 @@ def workflowinfo(docClass, cwl,
                  input, output,
                  step_metrics)
     {
-        cwl_metrics_version: '0.1.18',
+        cwl_metrics_version: '0.2.0',
         metrics_generator: {
             name: 'ep3-log-generator',
-            version: '0.0'
+            version: '1.7'
         },
         workflow: {
             start_date: start_date,
