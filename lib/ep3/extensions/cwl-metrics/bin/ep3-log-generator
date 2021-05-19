@@ -39,7 +39,7 @@ def workflowinfo(docClass, cwl,
         cwl_metrics_version: '0.2.0',
         metrics_generator: {
             name: 'ep3-log-generator',
-            version: '1.7'
+            version: '1.7.0'
         },
         workflow: {
             start_date: start_date,
