@@ -68,6 +68,7 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v1
         with:
           files: junit.xml
+          check_name: Example test results
       - name: Prepare CWL repository for conformance test
         run: git clone --depth 1 https://github.com/common-workflow-language/common-workflow-language.git cwl
       - name: Run conformance test
@@ -125,6 +126,7 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v1
         with:
           files: cwl/v1.0/junit.xml
+          check_name: Conformance test results
 
   docker:
     runs-on: ubuntu-latest
