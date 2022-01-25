@@ -1,6 +1,7 @@
 #!/bin/sh
 
 basedir=$(cd $(dirname $0) && pwd -P)
+export EP3_BINPATH=$basedir
 export EP3_LIBPATH=$basedir/lib/ep3
 export EP3_TEMPLATE_DIR=$basedir/share/ep3
 export EP3_EXT_PATH=$basedir/lib/ep3/extensions

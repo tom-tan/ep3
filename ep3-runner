@@ -108,6 +108,7 @@ if $0 == __FILE__
   parser.on('--extension=EXT', 'specify extension') { |ext|
     extensions.push ext
   }
+  parser.on('--assume-local', '(internal use only)')
   parser.on('--version', 'show version information') {
     system('git describe', :chdir => File.dirname($0))
     exit
@@ -122,6 +123,7 @@ if $0 == __FILE__
   end
 
   keep_tmpdir_level = keep_tmpdir_level or LeaveOnErrors
+  assume_local = opts.fetch('assume-local', false)
 
   cwl = ARGV.shift
   job = if ARGV.empty?
@@ -148,7 +150,13 @@ if $0 == __FILE__
   outdir = opts.fetch('outdir', '.')
   dst_arg = "--destination=#{outdir}"
 
-  ret_init = run_cmd("#{basedir}/ep3 init --force #{target_arg} #{cwl} > /dev/null", loglevel)
+  assume_opt = if assume_local
+                 '--assume-local'
+               else
+                 ''
+               end
+
+  ret_init = run_cmd("#{basedir}/ep3 init --force #{target_arg} #{assume_opt} #{cwl} > /dev/null", loglevel)
   unless ret_init['success']
     if Dir.exist?(tmpdir) && keep_tmpdir_level != LeaveAlways
       FileUtils.remove_entry tmpdir

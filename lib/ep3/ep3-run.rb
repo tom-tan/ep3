@@ -70,6 +70,7 @@ EOS
 
   env = {
     'EP3_LIBPATH' => ENV['EP3_LIBPATH'],
+    'EP3_BINPATH' => ENV['EP3_BINPATH'],
     'EP3_PID' => Process.pid.to_s,
   }
   if ENV.include? 'DOCKER_HOST'

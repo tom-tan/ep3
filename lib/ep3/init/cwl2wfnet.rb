@@ -10,7 +10,7 @@ UnsupportedRequirements = [
   'ScatterFeatureRequirement', 'StepInputExpressionRequirement',
 ]
 
-def cwl2wfnet(cfile, dst)
+def cwl2wfnet(cfile, dst, assume_local = false)
   if cfile.match(/^(.+)(#.+)/)
     basefile = $1
     target = $2
@@ -25,7 +25,7 @@ def cwl2wfnet(cfile, dst)
                File.expand_path(basefile)
              end
   prepare(basefile, target, dst)
-  convert(dst)
+  convert(dst, assume_local)
 end
 
 def prepare(basefile, cfile, dst)
@@ -78,16 +78,25 @@ def prepare(basefile, cfile, dst)
   end
 end
 
-def convert(dst)
+def convert(dst, assume_local = false)
   cwl = CommonWorkflowLanguage.load_file(File.join(dst, 'job.cwl'), false)
   case walk(cwl, '.class')
   when 'CommandLineTool'
-    [
-      {
-        destination: File.join(*dst),
-        net: cmdnet(cwl),
-      }
-    ]
+    if assume_local
+      [
+        {
+          destination: File.join(*dst),
+          net: cmdnet_local(cwl),
+        }
+      ]
+    else
+      [
+        {
+          destination: File.join(*dst),
+          net: cmdnet(cwl),
+        }
+      ]
+    end
   when 'ExpressionTool'
     [
       {
@@ -108,6 +117,33 @@ def convert(dst)
 end
 
 def cmdnet(cwl)
+  any = '_'
+  net = PetriNet.new('command-line-tool', 'ep3.system.main', 'tool')
+
+  net << Transition.new(in_: [Place.new('entrypoint', any)],
+                        out: [Place.new('input.json', "~(in.entrypoint)"),
+                              Place.new('StageIn', 'not-started'),
+                              Place.new('Execution', 'not-started'), Place.new('StageOut', 'not-started')],
+                        name: 'prepare')
+  net << Transition.new(in_: [Place.new('StageIn', 'not-started'), Place.new('input.json', any)],
+                        out: [Place.new('StageIn', 'success'),
+                              Place.new('cwl.input.json', '~(in.input.json)')],
+                        name: 'stage-in')
+  net << Transition.new(in_: [Place.new('Execution', 'not-started'), Place.new('StageIn', 'success'),
+                              Place.new('cwl.input.json', any)],
+                        out: [Place.new('Execution', 'success'),
+                              Place.new('output.json', '~(tr.stdout)'), Place.new('Execution.err', '~(tr.stderr)')],
+                        command: %Q!ep3-runner --assume-local --veryverbose --leave-tmpdir --tmpdir=$MEDAL_TMPDIR/command-tmpdir --outdir=$MEDAL_TMPDIR/outputs job.cwl ~(in.cwl.input.json)!,
+                        name: 'execute')
+  net << Transition.new(in_: [Place.new('StageOut', 'not-started'), Place.new('Execution', 'success'),
+                              Place.new('output.json', any)],
+                        out: [Place.new('StageOut', 'success'), Place.new('ExecutionState', 'success'),
+                              Place.new('cwl.output.json', '~(in.output.json)')],
+                        name: 'stage-out')
+  net
+end
+
+def cmdnet_local(cwl)
   any = '_'
   net = PetriNet.new('command-line-tool', 'ep3.system.main', 'tool')
 

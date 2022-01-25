@@ -13,6 +13,7 @@ def ep3_init(args)
   parser.banner = "Usage: ep3 init [options] <cwl>"
   parser.on('--target-dir=DIR')
   parser.on('--force')
+  parser.on('--assume-local')
   opts = parser.getopts(args)
 
   unless args.length == 1
@@ -53,7 +54,8 @@ def ep3_init(args)
   FileUtils.mkdir_p(dst) unless Dir.exist?(dst)
 
   begin
-    nets = cwl2wfnet(cwl, dst)
+    assume_local = opts.fetch('assume-local', false)
+    nets = cwl2wfnet(cwl, dst, assume_local)
     nets.each{ |n|
       open(File.join(n[:destination], 'job.yml'), 'w') { |f|
         f.puts YAML.dump(n[:net].to_h)

@@ -131,7 +131,7 @@ class PetriNet
         'env' => [
           {
             'name' => 'PATH',
-            'value' => '$EP3_LIBPATH/runtime:$PATH',
+            'value' => '$EP3_BINPATH:$EP3_LIBPATH/runtime:$PATH',
           },
           {
             'name' => 'DOCKER_HOST',
