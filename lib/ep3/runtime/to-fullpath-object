@@ -7,7 +7,7 @@ def full_object(cwl, input)
     obj = YAML.load_file(input)
     dirname = File.dirname(input)
     nss = YAML.load_file(cwl).fetch('$namespaces', {})
-    Hash[
+    ret = Hash[
         walk(cwl, '.inputs', []).select{ |inp|
             obj.fetch(inp.id, nil) or not inp.default.instance_of?(InvalidValue)
          }.map{ |inp|
@@ -20,8 +20,17 @@ def full_object(cwl, input)
                 InputParameter.parse_object(inp.type, val,
                                             dirname, {}, nss).to_h
             ]
-         }
+         },
     ]
+    [
+        'cwl:requirements', 'cwl-inspector:hints',
+        'cwl-inspector:weak-requirements', 'cwl-inspector:weak-hints',
+    ].each{ |key|
+        if obj.include?(key)
+            ret[key] = obj[key]
+        end
+    }
+    ret
 end
 
 if $0 == __FILE__
