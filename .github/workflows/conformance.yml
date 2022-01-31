@@ -142,7 +142,7 @@ jobs:
         with:
           images: ghcr.io/tom-tan/ep3
           tags: |
-            type=match,pattern=v\d+.\d+.\d+
+            type=match,event=tag,pattern=v\d+.\d+.\d+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
