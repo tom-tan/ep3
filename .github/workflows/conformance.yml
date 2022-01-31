@@ -138,7 +138,7 @@ jobs:
           submodules: true
       - name: Docker meta
         id: docker_meta
-        uses: docker/metadata-action@v1
+        uses: docker/metadata-action@v3
         with:
           images: ghcr.io/tom-tan/ep3
           tags: |
