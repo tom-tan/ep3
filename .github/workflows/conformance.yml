@@ -50,25 +50,6 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: '14.x'
-      # - name: Setup Python for testing
-      #   uses: actions/setup-python@v2
-      #   with:
-      #     python-version: '3.9.x'
-      # - name: Install cwltest
-      #   run: pip install cwltest
-      # - name: Run example
-      #   run: cwltest --tool $GITHUB_WORKSPACE/ep3-runner --test test.yml --timeout=30 --junit-xml=junit.xml
-      # - uses: actions/upload-artifact@v1
-      #   if: failure()
-      #   with:
-      #     name: junit-example.xml
-      #     path: junit.xml
-      # - name: Publish example test results
-      #   if: failure()
-      #   uses: EnricoMi/publish-unit-test-result-action@v1
-      #   with:
-      #     files: junit.xml
-      #     check_name: Example test results
       - name: Run example
         id: run-example
         uses: ./.github/actions/run-tests
@@ -90,15 +71,10 @@ jobs:
           runner: ${{ github.workspace }}/ep3-runner
           timeout: 30
           skip-python-install: true
-      # - name: Prepare CWL repository for conformance test
-      #   run: git clone --depth 1 https://github.com/common-workflow-language/common-workflow-language.git cwl
-      # - name: Run conformance test
-      #   run: |
-      #     cd cwl
-      #     ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner --badgedir=badges --junit-xml=junit.xml --timeout=$timeout || true
-      #     cd $GITHUB_WORKSPACE
-      #   env:
-      #     timeout: 30
+      - uses: actions/upload-artifact@v1
+        with:
+          name: junit.xml
+          path: ${{ steps.run-conformance.outputs.result }}
       - name: Save badges
         if: success() && github.event_name == 'push'
         run: |
@@ -139,15 +115,6 @@ jobs:
           CONFORMANCE_TOKEN: ${{ secrets.CONFORMANCE_TOKEN }}
           tag: ${{ needs.info.outputs.tag }}
           has_tag: ${{ needs.info.outputs.has_tag }}
-      - uses: actions/upload-artifact@v1
-        with:
-          name: junit.xml
-          path: ${{ steps.run-conformance.outputs.result }}
-      # - name: Publish conformance test results
-      #   uses: EnricoMi/publish-unit-test-result-action@v1
-      #   with:
-      #     files: cwl/v1.0/junit.xml
-      #     check_name: Conformance test results
 
   docker:
     runs-on: ubuntu-latest
