@@ -71,7 +71,7 @@ jobs:
           check_name: Example test results
       - name: Run conformance tests
         id: run-conformance
-        uses: .github/run-conformance/action.yml
+        uses: ./.github/actions/run-conformance
         with:
           cwlVersion: v1.0
           runner: ${{ github.workspace }}/ep3-runner
