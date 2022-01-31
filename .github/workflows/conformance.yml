@@ -142,8 +142,8 @@ jobs:
         with:
           images: ghcr.io/tom-tan/ep3
           tags: |
-            type=edge,enable=true,branch=$repo.default_branch
             type=match,event=tag,pattern=v\d+.\d+.\d+
+            master
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
@@ -163,7 +163,6 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ghcr.io/tom-tan/ep3:master
             ${{ steps.docker_meta.outputs.tags }}
 
   release:
