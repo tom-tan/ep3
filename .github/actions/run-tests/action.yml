@@ -1,0 +1,58 @@
+name: 'Run tests with specified CWL runner'
+author: 'Tomoya Tanjo'
+description: 'Run tests with specified CWL runner'
+inputs:
+  test-list:
+    description: 'A file that lists test cases in cwltest format'
+    required: true
+  runner:
+    description: 'full path to CWL runner to be tested'
+    required: true
+  timeout:
+    description: 'timeout in seconds'
+    required: false
+    default: 30
+  skip-python-install:
+    description: 'skip installing python interpreter'
+    required: false
+    default: false
+  allow-failure:
+    description: 'whether this action always succeeds even if some tests fail'
+    required: false
+    default: false
+  result-title:
+    description: 'title for test result'
+    required: false
+    default: 'Test result'
+outputs:
+  result:
+    description: 'The file name that stores the result of tests in JUnit XMl format'
+    value: ${{ steps.run-test.outputs.result }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Python for testing
+      if: ${{ inputs.skip-python-install == 'false' }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9.x'
+    - name: Install cwltest
+      shell: bash
+      run: pip install cwltest
+    - name: Run test
+      id: run-test
+      shell: bash
+      run: |
+        cwltest --tool ${{ inputs.runner }} --test ${{ inputs.test-list }} --timeout=${{ inputs.timeout }} --junit-xml=junit.xml; ret=$?
+        echo "::set-output name=result::junit.xml"
+        if [ ${{ inputs.allow-failure }} != 'false' ]; then
+          exit $ret
+        else
+          exit 0
+        fi
+    - name: Publish the result of tests
+      uses: EnricoMi/publish-unit-test-result-action@v1
+      if: always()
+      with:
+        files: junit.xml
+        check_name: ${{ inputs.result-title }}

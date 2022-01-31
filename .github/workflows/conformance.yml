@@ -50,25 +50,38 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: '14.x'
-      - name: Setup Python for testing
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.9.x'
-      - name: Install cwltest
-        run: pip install cwltest
+      # - name: Setup Python for testing
+      #   uses: actions/setup-python@v2
+      #   with:
+      #     python-version: '3.9.x'
+      # - name: Install cwltest
+      #   run: pip install cwltest
+      # - name: Run example
+      #   run: cwltest --tool $GITHUB_WORKSPACE/ep3-runner --test test.yml --timeout=30 --junit-xml=junit.xml
+      # - uses: actions/upload-artifact@v1
+      #   if: failure()
+      #   with:
+      #     name: junit-example.xml
+      #     path: junit.xml
+      # - name: Publish example test results
+      #   if: failure()
+      #   uses: EnricoMi/publish-unit-test-result-action@v1
+      #   with:
+      #     files: junit.xml
+      #     check_name: Example test results
       - name: Run example
-        run: cwltest --tool $GITHUB_WORKSPACE/ep3-runner --test test.yml --timeout=30 --junit-xml=junit.xml
+        id: run-example
+        uses: ./.github/actions/run-tests
+        with:
+          test-list: test.yml
+          runner: ${{ github.workspace }}/ep3-runner
+          timeout: 30
+          result-title: Example test results
       - uses: actions/upload-artifact@v1
         if: failure()
         with:
-          name: junit-example.xml
-          path: junit.xml
-      - name: Publish example test results
-        if: failure()
-        uses: EnricoMi/publish-unit-test-result-action@v1
-        with:
-          files: junit.xml
-          check_name: Example test results
+          name: junit.xml
+          path: ${{ steps.run-example.outputs.result }}
       - name: Run conformance tests
         id: run-conformance
         uses: ./.github/actions/run-conformance
