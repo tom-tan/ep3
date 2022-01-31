@@ -77,44 +77,54 @@ jobs:
           path: ${{ steps.run-conformance.outputs.result }}
       - name: Save badges
         if: success() && github.event_name == 'push'
-        run: |
-          git clone --depth 1 https://${GITHUB_ACTOR}:${CONFORMANCE_TOKEN}@github.com/tom-tan/conformance.git
-
-          cd conformance
-          conformance_dir=conformance/ep3/cwl_${cwlVersion}
-
-          mkdir -p ${conformance_dir}
-          rm -rf ${conformance_dir}/ep3_master
-          cp -r ${{ steps.run-conformance.outputs.badgedir }} ${conformance_dir}/ep3_master
-          commit=$(echo $GITHUB_SHA | cut -b -6)
-          printf '{ "subject": "commit", "status": "%s", "color": "blue" }' $commit > ${conformance_dir}/ep3_master/commit.json
-
-          git config user.name "ep3 bot"
-          git config user.email "ep3-bot@users.noreply.github.com"
-          git add ${conformance_dir}/ep3_master
-
-          if [ "$has_tag" = "true" ]; then
-            rm -rf ${conformance_dir}/ep3_latest ${conformance_dir}/ep3_${tag}
-            cp -r ${conformance_dir}/ep3_master ${conformance_dir}/ep3_latest
-            cp -r ${conformance_dir}/ep3_master ${conformance_dir}/ep3_${tag}
-            printf '{ "subject": "release", "status": "%s", "color": "blue" }' ${tag} > ${conformance_dir}/ep3_latest/version.json
-            cp ${conformance_dir}/ep3_latest/version.json ${conformance_dir}/ep3_${tag}/version.json
-            git add ${conformance_dir}/ep3_latest ${conformance_dir}/ep3_${tag}
-          fi
-
-          git diff-index --quiet HEAD || git commit -m "Conformance test of ep3 for CWL ${cwlVersion}" -m " Commit: ${GITHUB_SHA}"
-
-          if [ "$has_tag" = "true" ]; then
-            git tag -a "${tag}" -m "ep3 ${tag}"
-          fi
-
-          git push --quiet
-          git push --quiet --tags
-        env:
+        uses: ./.github/actions/upload-conformance-badges
+        with:
           cwlVersion: v1.0
-          CONFORMANCE_TOKEN: ${{ secrets.CONFORMANCE_TOKEN }}
-          tag: ${{ needs.info.outputs.tag }}
-          has_tag: ${{ needs.info.outputs.has_tag }}
+          runner-name: ep3
+          badgedir: ${{ steps.run-conformance.outputs.badgedir }}
+          repository: ${{ github.repository_owner }}/conformance
+          upload-default-branch: true
+          token: ${{ secrets.CONFORMANCE_TOKEN }}
+      # - name: Save badges
+      #   if: success() && github.event_name == 'push'
+      #   run: |
+      #     git clone --depth 1 https://${GITHUB_ACTOR}:${CONFORMANCE_TOKEN}@github.com/tom-tan/conformance.git
+
+      #     cd conformance
+      #     conformance_dir=conformance/ep3/cwl_${cwlVersion}
+
+      #     mkdir -p ${conformance_dir}
+      #     rm -rf ${conformance_dir}/ep3_master
+      #     cp -r ${{ steps.run-conformance.outputs.badgedir }} ${conformance_dir}/ep3_master
+      #     commit=$(echo $GITHUB_SHA | cut -b -6)
+      #     printf '{ "subject": "commit", "status": "%s", "color": "blue" }' $commit > ${conformance_dir}/ep3_master/commit.json
+
+      #     git config user.name "ep3 bot"
+      #     git config user.email "ep3-bot@users.noreply.github.com"
+      #     git add ${conformance_dir}/ep3_master
+
+      #     if [ "$has_tag" = "true" ]; then
+      #       rm -rf ${conformance_dir}/ep3_latest ${conformance_dir}/ep3_${tag}
+      #       cp -r ${conformance_dir}/ep3_master ${conformance_dir}/ep3_latest
+      #       cp -r ${conformance_dir}/ep3_master ${conformance_dir}/ep3_${tag}
+      #       printf '{ "subject": "release", "status": "%s", "color": "blue" }' ${tag} > ${conformance_dir}/ep3_latest/version.json
+      #       cp ${conformance_dir}/ep3_latest/version.json ${conformance_dir}/ep3_${tag}/version.json
+      #       git add ${conformance_dir}/ep3_latest ${conformance_dir}/ep3_${tag}
+      #     fi
+
+      #     git diff-index --quiet HEAD || git commit -m "Conformance test of ep3 for CWL ${cwlVersion}" -m " Commit: ${GITHUB_SHA}"
+
+      #     if [ "$has_tag" = "true" ]; then
+      #       git tag -a "${tag}" -m "ep3 ${tag}"
+      #     fi
+
+      #     git push --quiet
+      #     git push --quiet --tags
+      #   env:
+      #     cwlVersion: v1.0
+      #     CONFORMANCE_TOKEN: ${{ secrets.CONFORMANCE_TOKEN }}
+      #     tag: ${{ needs.info.outputs.tag }}
+      #     has_tag: ${{ needs.info.outputs.has_tag }}
 
   docker:
     runs-on: ubuntu-latest
