@@ -142,6 +142,7 @@ jobs:
         with:
           images: ghcr.io/tom-tan/ep3
           tags: |
+            type=edge,enable=true,branch=$repo.default_branch
             type=match,event=tag,pattern=v\d+.\d+.\d+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
