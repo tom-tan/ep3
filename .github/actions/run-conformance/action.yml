@@ -28,6 +28,7 @@ runs:
   using: 'composite'
   steps:
     - id: get-cwl-repository
+      shell: bash
       run: |
         baseOwner='common-workflow-language'
         if [ ${cwlVersion} = 'v1.0' ]; then
@@ -53,10 +54,12 @@ runs:
       with:
         python-version: '3.9.x'
     - name: Install cwltest
+      shell: bash
       run: pip install cwltest
     - name: Run conformance test
       id: conformance-test
       working-directory: ${{ github.workspace }}/cwl-run-conformance-${{ inputs.cwlVersion }}
+      shell: bash
       run: |
         if [ ${{ inputs.cwlVersion }} = 'v1.0' ]; then
           basedir=..
