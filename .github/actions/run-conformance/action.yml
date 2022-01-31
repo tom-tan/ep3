@@ -66,7 +66,7 @@ runs:
         else
           basedir=.
         fi
-        ./run_test.sh RUNNER=${{inputs.runner}} --badgedir=$basedir/badges --junit-xml=$basedir/junit.xml --timeout={{inputs.timeout}} || true
+        ./run_test.sh RUNNER=${{inputs.runner}} --badgedir=$basedir/badges --junit-xml=$basedir/junit.xml --timeout=${{inputs.timeout}} || true
         echo "::set-output name=badgedir::$GITHUB_WORKSPACE/cwl-run-conformance/badges"
         echo "::set-output name=result::$GITHUB_WORKSPACE/cwl-run-conformance/junit.xml"
       env:
