@@ -18,7 +18,6 @@ inputs:
     description: 'whether uploading the result of HEAD in the default branch'
     required: false
     default: false
-secrets:
   token:
     description: 'token to commit the repository specified in the `repository` field'
     required: true
@@ -37,7 +36,7 @@ runs:
       with:
         repository: ${{ inputs.repository }}
         path: conformance
-        token: ${{ secrets.token }}
+        token: ${{ inputs.token }}
     - name: Save badges
       working-directory: conformance
       shell: bash
