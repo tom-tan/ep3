@@ -1,0 +1,75 @@
+name: 'Run CWL conformance tests'
+author: 'Tomoya Tanjo'
+description: 'Run CWL conformance tests'
+inputs:
+  cwlVersion:
+    description: 'CWL version'
+    required: true
+  runner:
+    description: 'full path to CWL runner to be tested'
+    required: true
+  timeout:
+    description: 'timeout in seconds'
+    required: false
+    default: 30
+  skip-python-install:
+    description: 'skip installing python interpreter'
+    required: false
+    default: false
+  # TODO: EXTRA, -n, -j, --tags
+outputs:
+  badgedir:
+    description: 'The directory name that stores conformance badges'
+    value: ${{ steps.conformance-test.outputs.badgedir }}
+  result:
+    description: 'The file name that stores the result of conformance tests in JUnit XMl format'
+    value: ${{ steps.conformance-test.outputs.result }}
+runs:
+  using: 'composite'
+  steps:
+    - id: get-cwl-repository
+      run: |
+        baseOwner='common-workflow-language'
+        if [ ${cwlVersion} = 'v1.0' ]; then
+          repo='common-workflow-language'
+        elif [ ${cwlVersion} = 'v1.1' ]; then
+          repo='cwl-v1.1'
+        elif [ ${cwlVersion} = 'v1.2' ]; then
+          repo='cwl-v1.2'
+        else
+          echo "::error ::Unsupported cwlVersion: '${cwlVersion}'"
+          exit 1
+        fi
+        echo "::set-output name=repo::${baseOwner}/${repo}"
+      env:
+        cwlVersion: ${{ inputs.cwlVersion }}
+    - uses: actions/checkout@v2
+      with:
+        repository: ${{ steps.get-cwl-repository.outputs.repo }}
+        path: cwl-run-conformance-${{ inputs.cwlVersion }}
+    - name: Setup Python for testing
+      if: ${{ inputs.skip-python-install == 'false' }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9.x'
+    - name: Install cwltest
+      run: pip install cwltest
+    - name: Run conformance test
+      id: conformance-test
+      working-directory: ${{ github.workspace }}/cwl-run-conformance-${{ inputs.cwlVersion }}
+      run: |
+        if [ ${{ inputs.cwlVersion }} = 'v1.0' ]; then
+          basedir=..
+        else
+          basedir=.
+        fi
+        ./run_test.sh RUNNER=${{inputs.runner}} --badgedir=$basedir/badges --junit-xml=$basedir/junit.xml --timeout={{inputs.timeout}} || true
+        echo "::set-output name=badgedir::$GITHUB_WORKSPACE/cwl-run-conformance/badges"
+        echo "::set-output name=result::$GITHUB_WORKSPACE/cwl-run-conformance/junit.xml"
+      env:
+        cwlVersion: 
+    - name: Publish the result of conformance tests
+      uses: EnricoMi/publish-unit-test-result-action@v1
+      with:
+        files: ${{ github.workspace }}/cwl-run-conformance-${{ inputs.cwlVersion }}/junit.xml
+        check_name: The result of conformance tests for CWL ${{ inputs.cwlVersion }}

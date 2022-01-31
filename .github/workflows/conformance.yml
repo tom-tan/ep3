@@ -69,15 +69,23 @@ jobs:
         with:
           files: junit.xml
           check_name: Example test results
-      - name: Prepare CWL repository for conformance test
-        run: git clone --depth 1 https://github.com/common-workflow-language/common-workflow-language.git cwl
-      - name: Run conformance test
-        run: |
-          cd cwl
-          ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner --badgedir=badges --junit-xml=junit.xml --timeout=$timeout || true
-          cd $GITHUB_WORKSPACE
-        env:
+      - name: Run conformance tests
+        id: run-conformance
+        uses: .github/run-conformance
+        with:
+          cwlVersion: v1.0
+          runner: ${{ github.workspace }}/ep3-runner
           timeout: 30
+          skip-python-install: true
+      # - name: Prepare CWL repository for conformance test
+      #   run: git clone --depth 1 https://github.com/common-workflow-language/common-workflow-language.git cwl
+      # - name: Run conformance test
+      #   run: |
+      #     cd cwl
+      #     ./run_test.sh RUNNER=$GITHUB_WORKSPACE/ep3-runner --badgedir=badges --junit-xml=junit.xml --timeout=$timeout || true
+      #     cd $GITHUB_WORKSPACE
+      #   env:
+      #     timeout: 30
       - name: Save badges
         if: success() && github.event_name == 'push'
         run: |
@@ -88,7 +96,7 @@ jobs:
 
           mkdir -p ${conformance_dir}
           rm -rf ${conformance_dir}/ep3_master
-          cp -r $GITHUB_WORKSPACE/cwl/${cwlVersion}/badges ${conformance_dir}/ep3_master
+          cp -r ${{ steps.run-conformance.outputs.badgedir }} ${conformance_dir}/ep3_master
           commit=$(echo $GITHUB_SHA | cut -b -6)
           printf '{ "subject": "commit", "status": "%s", "color": "blue" }' $commit > ${conformance_dir}/ep3_master/commit.json
 
@@ -121,12 +129,12 @@ jobs:
       - uses: actions/upload-artifact@v1
         with:
           name: junit.xml
-          path: cwl/v1.0/junit.xml
-      - name: Publish conformance test results
-        uses: EnricoMi/publish-unit-test-result-action@v1
-        with:
-          files: cwl/v1.0/junit.xml
-          check_name: Conformance test results
+          path: ${{ steps.run-conformance.outputs.result }}
+      # - name: Publish conformance test results
+      #   uses: EnricoMi/publish-unit-test-result-action@v1
+      #   with:
+      #     files: cwl/v1.0/junit.xml
+      #     check_name: Conformance test results
 
   docker:
     runs-on: ubuntu-latest
