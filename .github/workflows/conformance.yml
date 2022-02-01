@@ -52,7 +52,7 @@ jobs:
           node-version: '14.x'
       - name: Run example
         id: run-example
-        uses: ./.github/actions/run-tests
+        uses: tom-tan/cwl-run-tests@v1.0.0
         with:
           test-list: test.yml
           runner: ${{ github.workspace }}/ep3-runner
