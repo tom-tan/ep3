@@ -52,7 +52,7 @@ jobs:
           node-version: '14.x'
       - name: Run example
         id: run-example
-        uses: common-workflow-lab/run-tests@v1.0.0
+        uses: common-workflow-lab/run-tests@v1
         with:
           test-list: test.yml
           runner: ${{ github.workspace }}/ep3-runner
@@ -65,7 +65,7 @@ jobs:
           path: ${{ steps.run-example.outputs.result }}
       - name: Run conformance tests
         id: run-conformance
-        uses: common-workflow-lab/run-conformance-tests@v1.0.1
+        uses: common-workflow-lab/run-conformance-tests@v1
         with:
           cwlVersion: v1.0
           runner: ${{ github.workspace }}/ep3-runner
@@ -77,14 +77,14 @@ jobs:
           path: ${{ steps.run-conformance.outputs.result }}
       - name: Save badges
         if: success() && github.event_name == 'push'
-        uses: common-workflow-lab/upload-conformance-badges@v1.0.0
+        uses: common-workflow-lab/upload-conformance-badges@v1
         with:
           cwlVersion: v1.0
           runner-name: ep3
           badgedir: ${{ steps.run-conformance.outputs.badgedir }}
           repository: ${{ github.repository_owner }}/conformance
           upload-default-branch: true
-          token: ${{ secrets.CONFORMANCE_TOKEN }}
+          ssh-key: ${{ secrets.CONFORMANCE_KEY }}
 
   docker:
     runs-on: ubuntu-latest
